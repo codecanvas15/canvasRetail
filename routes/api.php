@@ -90,6 +90,7 @@ Route::group([
     // refund
     Route::post("refund", [RefundController::class, "refund"]);
     Route::get("refund", [RefundController::class, "getRefund"]);
+    Route::delete("refund", [RefundController::class, "getRefund"]);
 
     // reports
 });
