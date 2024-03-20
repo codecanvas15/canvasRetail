@@ -1,0 +1,1473 @@
+{
+	"info": {
+		"_postman_id": "cd3184c0-04ba-4ec7-8d1e-8b7b0c73b2ee",
+		"name": "Canvas Retail",
+		"description": "CanvasRetail RestAPI Documentation",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "23449189"
+	},
+	"item": [
+		{
+			"name": "Item",
+			"item": [
+				{
+					"name": "get item by id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}item/pod002",
+							"host": [
+								"{{url }}item"
+							],
+							"path": [
+								"pod002"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "add item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "item_code",
+									"value": "pod002",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "name",
+									"value": "pod",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "dewasa",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"description": "optional",
+									"type": "file",
+									"src": "/C:/Users/charles/Pictures/hp_2.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}item",
+							"host": [
+								"{{url }}item"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get item",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}item",
+							"host": [
+								"{{url }}item"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "pod",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "dewasa bebas",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"description": "optional",
+									"type": "file",
+									"src": "/C:/Users/charles/Pictures/ace.png"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}item/pod008",
+							"host": [
+								"{{url }}item"
+							],
+							"path": [
+								"pod008"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete item",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOlwvXC8xMjcuMC4wLjE6ODAwMFwvYXBpXC9sb2dpbiIsImlhdCI6MTcxMDI1ODQ2NCwiZXhwIjoxNzEwMjYyMDY0LCJuYmYiOjE3MTAyNTg0NjQsImp0aSI6IlJVSE1kQXJGZDdmRnBxY3IiLCJzdWIiOjEsInBydiI6Ijg3ZTBhZjFlZjlmZDE1ODEyZmRlYzk3MTUzYTE0ZTBiMDQ3NTQ2YWEifQ.AfimMiUcqg2E3TZ3rogGiL8WcmN5IDgv05udGT8nxmw",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}item/pod002",
+							"host": [
+								"{{url }}item"
+							],
+							"path": [
+								"pod002"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Master Item"
+		},
+		{
+			"name": "tax",
+			"item": [
+				{
+					"name": "get tax",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}tax",
+							"host": [
+								"{{url }}tax"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "add tax",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "pph",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "value",
+									"value": "11",
+									"description": "mandatory",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}tax",
+							"host": [
+								"{{url }}tax"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update tax",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "pph",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "value",
+									"value": "12",
+									"description": "optional",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}tax/1",
+							"host": [
+								"{{url }}tax"
+							],
+							"path": [
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get tax by id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}tax/1",
+							"host": [
+								"{{url }}tax"
+							],
+							"path": [
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete tax",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}tax/1",
+							"host": [
+								"{{url }}tax"
+							],
+							"path": [
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "location",
+			"item": [
+				{
+					"name": "add location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "gudang miras",
+									"description": "mandatory",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}location",
+							"host": [
+								"{{url }}location"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "gudang senjata & granat",
+									"description": "mandatory",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}location\\1",
+							"host": [
+								"{{url }}location"
+							],
+							"path": [
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get location",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{url }}location",
+							"host": [
+								"{{url }}location"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get location by id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{url }}location/2",
+							"host": [
+								"{{url }}location"
+							],
+							"path": [
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete location",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{url }}location/3",
+							"host": [
+								"{{url }}location"
+							],
+							"path": [
+								"3"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "contact",
+			"item": [
+				{
+					"name": "add contact",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "budi bakso",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "type",
+									"value": "CUSTOMER",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "omah",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "8979285734",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "budi@mbut.cok",
+									"description": "mandatory",
+									"type": "text"
+								},
+								{
+									"key": "behalf",
+									"value": "opo yo",
+									"description": "optional",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}contact",
+							"host": [
+								"{{url }}contact"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update contact",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "budi bengkel",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "type",
+									"value": "CUSTOMER",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "omah",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "8979285734",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "budi@mbut.cok",
+									"description": "optional",
+									"type": "text"
+								},
+								{
+									"key": "behalf",
+									"value": "opo yo",
+									"description": "optional",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}contact/1",
+							"host": [
+								"{{url }}contact"
+							],
+							"path": [
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get contact by id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{url }}contact/1",
+							"host": [
+								"{{url }}contact"
+							],
+							"path": [
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get contact by id Copy",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{url }}contact/2",
+							"host": [
+								"{{url }}contact"
+							],
+							"path": [
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get contact",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{url }}contact",
+							"host": [
+								"{{url }}contact"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "procurement",
+			"item": [
+				{
+					"name": "add procurement",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "contact_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "location_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "tax_ids",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "procurement_date",
+									"value": "16-03-2024",
+									"description": "format : day-month-year (dd-mm-yyyy)",
+									"type": "text"
+								},
+								{
+									"key": "total_amount",
+									"value": "7000000",
+									"type": "text"
+								},
+								{
+									"key": "items[0][item_code]",
+									"value": "pod001",
+									"type": "text"
+								},
+								{
+									"key": "items[0][price]",
+									"value": "200000",
+									"type": "text"
+								},
+								{
+									"key": "items[0][qty]",
+									"value": "30",
+									"type": "text"
+								},
+								{
+									"key": "items[0][total]",
+									"value": "6000000",
+									"type": "text"
+								},
+								{
+									"key": "items[1][item_code]",
+									"value": "pod002",
+									"type": "text"
+								},
+								{
+									"key": "items[1][price]",
+									"value": "100000",
+									"type": "text"
+								},
+								{
+									"key": "items[1][qty]",
+									"value": "10",
+									"type": "text"
+								},
+								{
+									"key": "items[1][total]",
+									"value": "1000000",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}procurement",
+							"host": [
+								"{{url }}procurement"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get procurement",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}procurement",
+							"host": [
+								"{{url }}procurement"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get procurement by id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}procurement/6",
+							"host": [
+								"{{url }}procurement"
+							],
+							"path": [
+								"6"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete procurement",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}procurement/6",
+							"host": [
+								"{{url }}procurement"
+							],
+							"path": [
+								"6"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update procurement",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "delivery_status",
+									"value": "Pending",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}procurement/6",
+							"host": [
+								"{{url }}procurement"
+							],
+							"path": [
+								"6"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "sales",
+			"item": [
+				{
+					"name": "add sales",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "contact_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "location_id",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "tax_ids",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "sales_date",
+									"value": "16-03-2024",
+									"description": "format : day-month-year (dd-mm-yyyy)",
+									"type": "text"
+								},
+								{
+									"key": "total_amount",
+									"value": "7000000",
+									"type": "text"
+								},
+								{
+									"key": "items[0][item_code]",
+									"value": "pod001",
+									"type": "text"
+								},
+								{
+									"key": "items[0][price]",
+									"value": "200000",
+									"type": "text"
+								},
+								{
+									"key": "items[0][qty]",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "items[0][total]",
+									"value": "200000",
+									"type": "text"
+								},
+								{
+									"key": "items[1][item_code]",
+									"value": "pod002",
+									"type": "text"
+								},
+								{
+									"key": "items[1][price]",
+									"value": "100000",
+									"type": "text"
+								},
+								{
+									"key": "items[1][qty]",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "items[1][total]",
+									"value": "200000",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}sales",
+							"host": [
+								"{{url }}sales"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get sales",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}sales",
+							"host": [
+								"{{url }}sales"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get sales by id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}sales/7",
+							"host": [
+								"{{url }}sales"
+							],
+							"path": [
+								"7"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete sales",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}sales/6",
+							"host": [
+								"{{url }}sales"
+							],
+							"path": [
+								"6"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update sales",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "delivery_status",
+									"value": "On process",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}sales/6",
+							"host": [
+								"{{url }}sales"
+							],
+							"path": [
+								"6"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Payment",
+			"item": [
+				{
+					"name": "payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "procurement_id",
+									"value": "9",
+									"description": "Mandatory (Optional if sales_id is filled)",
+									"type": "text"
+								},
+								{
+									"key": "sales_id",
+									"value": "7",
+									"description": "Mandatory (Optional if sales_id is filled)",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "amount",
+									"value": "5000000",
+									"description": "Mandatory",
+									"type": "text"
+								},
+								{
+									"key": "pay_date",
+									"value": "16-03-2024",
+									"description": "Mandatory\nformat : day-month-year (dd-mm-yyyy)",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}payment",
+							"host": [
+								"{{url }}payment"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get payment",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{url }}payment",
+							"host": [
+								"{{url }}payment"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "refund",
+			"item": [
+				{
+					"name": "get refund",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "{{url }}refund",
+							"host": [
+								"{{url }}refund"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "refund",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "payment_id",
+									"value": "3",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{url }}refund",
+							"host": [
+								"{{url }}refund"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "username",
+							"value": "admin",
+							"description": "mandatory",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "admin",
+							"description": "mandatory",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{url }}login",
+					"host": [
+						"{{url }}login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "profile",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "{{jwt}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{url }}profile",
+					"host": [
+						"{{url }}profile"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "logout",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{jwt}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{url }}logout",
+					"host": [
+						"{{url }}logout"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

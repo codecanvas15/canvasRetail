@@ -1,0 +1,21 @@
+{
+	"id": "c7a8920a-595f-494b-ac62-562ef45226cb",
+	"name": "Local",
+	"values": [
+		{
+			"key": "url ",
+			"value": "http://127.0.0.1:8000/api/",
+			"type": "default",
+			"enabled": true
+		},
+		{
+			"key": "jwt",
+			"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOlwvXC8xMjcuMC4wLjE6ODAwMFwvYXBpXC9sb2dpbiIsImlhdCI6MTcxMDMzNDE5MCwiZXhwIjoxNzEwMzM3NzkwLCJuYmYiOjE3MTAzMzQxOTAsImp0aSI6IjJ4RnNHY3lCWFZlYTltQ3YiLCJzdWIiOjEsInBydiI6Ijg3ZTBhZjFlZjlmZDE1ODEyZmRlYzk3MTUzYTE0ZTBiMDQ3NTQ2YWEifQ.sCOGA0jRFG9oMEenhbcJUppqPenPLyajUEmzzUiHRUM",
+			"type": "default",
+			"enabled": true
+		}
+	],
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2024-03-20T15:49:03.414Z",
+	"_postman_exported_using": "Postman/10.24.6"
+}
