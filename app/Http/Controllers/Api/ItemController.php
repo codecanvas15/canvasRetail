@@ -168,7 +168,7 @@ class ItemController extends Controller
 
     public function getUniqueCategories()
     {
-        $categories = Item::where('status', 1)->distinct()->get('category');
+        $categories = Item::where('status', 1)->distinct()->pluck('category');
 
         return response()->json([
             "status" => true,
