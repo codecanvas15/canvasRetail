@@ -46,6 +46,9 @@ Route::group([
     Route::post("item/{item_code}",[ItemController::class, "updateItem"]);
     Route::delete("item/{item_code}",[ItemController::class, "deleteItem"]);
 
+    // get categories
+    Route::get("categories",[ItemController::class, "getUniqueCategories"]);
+
     // location
     Route::post("location",[LocationController::class, "addLocation"]);
     Route::get("location",[LocationController::class, "getLocation"]);

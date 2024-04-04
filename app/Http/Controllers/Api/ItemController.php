@@ -165,4 +165,14 @@ class ItemController extends Controller
             ], 404);
         }
     }
+
+    public function getUniqueCategories()
+    {
+        $categories = Item::where('status', 1)->distinct()->get('category');
+
+        return response()->json([
+            "status" => true,
+            "data"  => $categories
+        ]);
+    }
 }
