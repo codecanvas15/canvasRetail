@@ -57,9 +57,14 @@ class AuthController extends Controller
         if(!empty($token)){
 
             return response()->json([
-                "status" => true,
-                "message" => "User logged in succcessfully",
-                "token" => $token
+                "status"    => true,
+                "message"   => "User logged in succcessfully",
+                "token"     => $token,
+                "profile"   => [
+                    "username"  => auth()->user()->username,
+                    "name"      => auth()->user()->name,
+                    "role"      => auth()->user()->role
+                ]
             ]);
         }
 
