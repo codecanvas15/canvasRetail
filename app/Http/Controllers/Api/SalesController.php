@@ -68,11 +68,36 @@ class SalesController extends Controller
             $date = strtotime($request->sales_date);
             $salesDate = date('Y-m-d H:i:s',$date);
 
+            $outstanding = $request->total_amount - $request->pay_amount;
+
+            $paymentStatus = '';
+            if ($outstanding > 0)
+            {
+                $paymentStatus = 'Partially Paid';
+            }
+            else if ($outstanding < 0)
+            {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Total Payment amount is greater than sales amount."
+                ], 400);
+            }
+            else if ($outstanding == 0)
+            {
+                $paymentStatus = 'Paid';
+            }
+
+            if ($request->pay_amount == 0)
+            {
+                $paymentStatus = 'Unpaid';
+            }
+
             // insert sales
             $sales = Sales::create([
                 'contact_id' => $request->contact_id,
                 'sales_date' => $salesDate,
                 'amount'     => $request->total_amount,
+                'pay_status' => $paymentStatus,
                 'created_by' => auth()->user()->id,
                 'updated_by' => auth()->user()->id,
                 'status'     => 1,
@@ -85,7 +110,7 @@ class SalesController extends Controller
                 // insert and update item details
                 if ($itemDet == null)
                 {
-                    ItemDetail::create([
+                    $itemDet = ItemDetail::create([
                         'item_code'     => $item['item_code'],
                         'location_id'   => $request->location_id,
                         'qty'           => $item['qty'] * -1,
@@ -118,6 +143,17 @@ class SalesController extends Controller
                     'status' => 1,
                 ]);
             }
+
+            Payment::create([
+                'sales_id'      => $sales->id,
+                'type'          => "OUT",
+                'amount'        => $request->pay_amount,
+                'pay_date'      => date("Y-m-d H:i:s"),
+                'created_by'    => auth()->user()->id,
+                'updated_by'    => auth()->user()->id,
+                'status'        => 1,
+                'pay_desc'      => "Initial Payment"
+            ]);
 
             DB::commit();
 

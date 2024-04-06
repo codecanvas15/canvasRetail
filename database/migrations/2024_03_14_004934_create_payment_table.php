@@ -25,6 +25,7 @@ class CreatePaymentTable extends Migration
             $table->string('updated_by');
             $table->timestamp('updated_at')->nullable();
             $table->integer('status');
+            $table->string('pay_desc');
 
             $table->foreign('procurement_id')->references('id')->on('procurements');
             $table->foreign('sales_id')->references('id')->on('sales');

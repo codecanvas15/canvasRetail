@@ -146,7 +146,7 @@ class ItemController extends Controller
             $itemDet = DB::table('items_details')
                         ->join('locations', 'items_details.location_id', '=', 'locations.id')
                         ->where('items_details.status', 1)
-                        ->select('items_details.qty', 'items_details.price', 'locations.name')
+                        ->select('items_details.qty', 'items_details.price', 'locations.name AS location')
                         ->get();
 
             $data = $item;

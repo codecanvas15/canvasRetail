@@ -26,7 +26,8 @@ class ProcurementController extends Controller
             "location_id"       => "required",
             "total_amount"      => "required",
             "items"             => "required",
-            "procurement_date"  => "required"
+            "procurement_date"  => "required",
+            "pay_amount"        => "required"
         ]);
 
         if (!Contact::where('id', $request->contact_id)->where('status', 1)->exists())
@@ -73,12 +74,36 @@ class ProcurementController extends Controller
 
             $procurementDate = date('Y-m-d H:i:s',$date);
 
+            $outstanding = $request->total_amount - $request->pay_amount;
+
+            $paymentStatus = '';
+            if ($outstanding > 0)
+            {
+                $paymentStatus = 'Partially Paid';
+            }
+            else if ($outstanding < 0)
+            {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Total Payment amount is greater than procurement amount."
+                ], 400);
+            }
+            else if ($outstanding == 0)
+            {
+                $paymentStatus = 'Paid';
+            }
+
+            if ($request->pay_amount == 0)
+            {
+                $paymentStatus = 'Unpaid';
+            }
+
             // insert procurement
             $procurement = Procurement::create([
                 'contact_id'        => $request->contact_id,
                 'procurement_date'  => $procurementDate,
                 'amount'            => $request->total_amount,
-                'pay_status'        => 'Unpaid',
+                'pay_status'        => $paymentStatus,
                 'created_by'        => auth()->user()->id,
                 'updated_by'        => auth()->user()->id,
                 'status'            => 1,
@@ -91,7 +116,7 @@ class ProcurementController extends Controller
                 // insert to item detail
                 if ($itemDet == null)
                 {
-                    ItemDetail::create([
+                    $itemDet = ItemDetail::create([
                         'item_code'     => $item['item_code'],
                         'location_id'   => $request->location_id,
                         'qty'           => $item['qty'],
@@ -124,6 +149,17 @@ class ProcurementController extends Controller
                     'status'            => 1,
                 ]);
             }
+
+            Payment::create([
+                'procurement_id'=> $procurement->id,
+                'type'          => "OUT",
+                'amount'        => $request->pay_amount,
+                'pay_date'      => date("Y-m-d H:i:s"),
+                'created_by'    => auth()->user()->id,
+                'updated_by'    => auth()->user()->id,
+                'status'        => 1,
+                'pay_desc'      => "Initial Payment"
+            ]);
 
             DB::commit();
 

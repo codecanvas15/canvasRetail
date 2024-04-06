@@ -18,5 +18,6 @@ class Payment extends XModel
         'created_by',
         'updated_by',
         'status',
+        'pay_desc'
     ];
 }

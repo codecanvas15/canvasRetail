@@ -25,20 +25,25 @@ class RefundController extends Controller
             DB::beginTransaction();
             try
             {
-                $payment->update([
-                    'status'        => 0,
-                    'updated_by'    => auth()->user()->id,
-                    'updated_at'    => date("Y-m-d H:i:s")
-                ]);
-
-                $description = "Refund payment " . $request->payment_id . " at " . date("Y-m-d H:i:s") . " by " . auth()->user()->username;
+                $description = "Refund payment " . $request->payment_id . "at" . date("Y-m-d H:i:s") . " by " . auth()->user()->username;
 
                 $this->history('payment', 'refund', $description);
 
                 if ($payment->procurement_id != null && $payment->sales_id == null)
                 {
+                    Payment::create([
+                        'procurement_id'=> $payment->procurement_id,
+                        'type'          => "REFUND",
+                        'amount'        => $payment->amount,
+                        'pay_date'      => date("Y-m-d H:i:s"),
+                        'created_by'    => auth()->user()->id,
+                        'updated_by'    => auth()->user()->id,
+                        'status'        => 1,
+                        'pay_desc'      => $description
+                    ]);
+
                     $procurement = Procurement::where('id', $payment->procurement_id)->where('status', 1)->first();
-                    $payment = Payment::where('procurement_id', $payment->procurement_id)->where('status', 1)->sum('amount');
+                    $payment = Payment::where('procurement_id', $payment->procurement_id)->where('status', 1)->where('type', 'not like', 'REFUND')->sum('amount');
 
                     $paymentStatus = '';
 
@@ -55,6 +60,7 @@ class RefundController extends Controller
                         $paymentStatus = 'Partialy Paid';
                     }
 
+
                     $procurement->update([
                         'pay_status'     => $paymentStatus,
                         'updated_by'     => auth()->user()->id,
@@ -63,8 +69,19 @@ class RefundController extends Controller
                 }
                 else if ($payment->sales_id != null && $payment->procurement_id == null)
                 {
+                    Payment::create([
+                        'sales_id'      => $payment->sales_id,
+                        'type'          => "REFUND",
+                        'amount'        => $payment->amount,
+                        'pay_date'      => date("Y-m-d H:i:s"),
+                        'created_by'    => auth()->user()->id,
+                        'updated_by'    => auth()->user()->id,
+                        'status'        => 1,
+                        'pay_desc'      => $description
+                    ]);
+
                     $sales = Sales::where('id', $payment->sales_id)->where('status', 1)->first();
-                    $payment = Payment::where('sales_id', $payment->sales_id)->where('status', 1)->sum('amount');
+                    $payment = Payment::where('sales_id', $payment->sales_id)->where('status', 1)->where('type', 'not like', 'REFUND')->sum('amount');
 
                     $paymentStatus = '';
 
@@ -116,7 +133,7 @@ class RefundController extends Controller
 
     public function getRefund()
     {
-        $refund = Payment::where('status', 0)->get();
+        $refund = Payment::where('status', 1)->where('type', 'REFUND')->get();
 
         return response()->json([
             "status" => true,
