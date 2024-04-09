@@ -78,7 +78,7 @@ class StockCardController extends Controller
             ) a
             WHERE
                 a.procurement_date >= STR_TO_DATE('04-2024', '%m-%Y') or a.sales_date >= STR_TO_DATE('04-2024', '%m-%Y')
-            ORDER BY a.item_code, a.created_at
+            ORDER BY a.item_code, a.procurement_date, a.sales_date
         "));
         // dd($stock);
 
