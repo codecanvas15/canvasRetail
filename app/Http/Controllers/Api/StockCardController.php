@@ -155,9 +155,9 @@ class StockCardController extends Controller
                 $result[$i]['value']            = 0;
             }
 
-            $item = array_filter($stock, function($k) use ($item_code) {
+            $item = array_values(array_filter($stock, function($k) use ($item_code) {
                 return $k->item_code == $item_code;
-            });
+            }));
 
             $saldoQty               = $result[$i]['saldo_qty'];
             $saldoNominal           = $result[$i]['saldo_nominal'];
