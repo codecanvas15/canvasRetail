@@ -171,7 +171,7 @@ class StockCardController extends Controller
 
                 $result[$i]['items'][$j]->saldo_qty = $saldoQty;
                 $result[$i]['items'][$j]->saldo_nominal = $saldoNominal;
-                $result[$i]['items'][$j]->value = $saldoNominal / $saldoQty;
+                $result[$i]['items'][$j]->value = $saldoQty == 0 ? 0 : $saldoNominal / $saldoQty;
             }
         }
 
