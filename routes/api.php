@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProcurementController;
 use App\Http\Controllers\Api\RefundController;
 use App\Http\Controllers\Api\SalesController;
+use App\Http\Controllers\Api\StockCardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -95,5 +96,7 @@ Route::group([
     Route::get("refund", [RefundController::class, "getRefund"]);
 
     // reports
+    // stockcard
+    Route::get("stockcard", [StockCardController::class, "getStockCard"]);
 });
 
