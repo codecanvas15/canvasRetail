@@ -98,5 +98,7 @@ Route::group([
     // reports
     // stockcard
     Route::get("stockcard", [StockCardController::class, "getStockCard"]);
+    Route::get("stockcardList", [StockCardController::class, "getStockCardList"]);
+    Route::get("stockcardDetails", [StockCardController::class, "getStockCardDetails"]);
 });
 
