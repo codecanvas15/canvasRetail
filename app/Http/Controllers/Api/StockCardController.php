@@ -244,7 +244,7 @@ class StockCardController extends Controller
                     JOIN locations l ON id.location_id = l.id and l.status = 1
                 WHERE
                     i.status = 1
-            ) a ON i.item_code = a.item_code and a.created_at <= STR_TO_DATE('" . $filterMonth ."', '%m-%Y')
+            ) a ON i.item_code = a.item_code and DATE_FORMAT(a.created_at, '%m-%Y') <= STR_TO_DATE('" . $filterMonth ."', '%m-%Y')
             GROUP BY i.item_code
             ORDER BY i.item_code
         "));
