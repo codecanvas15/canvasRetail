@@ -200,13 +200,15 @@ class StockCardController extends Controller
 
         $stockList = DB::select(DB::raw("
             SELECT
-                a.item_code,
-                a.item_name,
-                a.item_image,
+                i.item_code,
+                i.name as item_name,
+                i.image as item_image,
                 (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))) as saldo_qty,
                 (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal,
                 ((sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0)))/(sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0)))) as value
-            FROM (
+            FROM
+            items i
+            LEFT JOIN (
                 SELECT
                     i.item_code,
                     i.name as item_name,
@@ -242,11 +244,9 @@ class StockCardController extends Controller
                     JOIN locations l ON id.location_id = l.id and l.status = 1
                 WHERE
                     i.status = 1
-            ) a
-            WHERE
-                a.created_at <= STR_TO_DATE('" . $filterMonth ."', '%m-%Y')
-            GROUP BY a.item_code
-            ORDER BY a.item_code, a.created_at
+            ) a ON i.item_code = a.item_code and a.created_at <= STR_TO_DATE('" . $filterMonth ."', '%m-%Y')
+            GROUP BY i.item_code
+            ORDER BY i.item_code
         "));
 
         return response()->json([
