@@ -331,12 +331,113 @@ class StockCardController extends Controller
             WHERE
                 a.item_code = '" . $request->item_code . "'
                 AND (a.procurement_date >= STR_TO_DATE('" . $filterMonth ."', '%m-%Y') or a.sales_date >= STR_TO_DATE('" . $filterMonth ."', '%m-%Y'))
-            ORDER BY a.item_code, a.procurement_date, a.sales_date
+            ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
         "));
+
+        $stockAwal = DB::select(DB::raw("
+            SELECT
+                a.item_code,
+                (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))) as saldo_qty,
+                (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal,
+                ((sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0)))/(sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0)))) as value
+            FROM (
+                SELECT
+                    i.item_code,
+                    pd.qty as procurement_qty,
+                    pd.total as procurement_total,
+                    null as sales_qty,
+                    null as sales_total,
+                    p.procurement_date as tx_date,
+                    p.created_at as created_at
+                FROM
+                    items i
+                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
+                    RIGHT JOIN procurement_details pd ON id.id = pd.item_detail_id and pd.status = 1
+                    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status = 1
+                    JOIN locations l ON id.location_id = l.id and l.status = 1
+                WHERE
+                    i.status = 1
+                UNION ALL
+                SELECT
+                    i.item_code,
+                    null as procurement_qty,
+                    null as procurement_total,
+                    sd.qty as sales_qty,
+                    sd.total as sales_total,
+                    s.sales_date as tx_date,
+                    s.created_at created_at
+                FROM
+                    items i
+                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
+                    RIGHT JOIN sales_details sd ON id.id = sd.item_detail_id and sd.status = 1
+                    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status = 1
+                    JOIN locations l ON id.location_id = l.id and l.status = 1
+                WHERE
+                    i.status = 1
+            ) a
+            WHERE
+                a.tx_date <= STR_TO_DATE('" . $filterMonth . "', '%m-%Y')
+                AND a.item_code = '" . $request->item_code . "'
+            GROUP BY a.item_code
+            ORDER BY a.item_code, a.created_at
+        "));
+
+        $result = [];
+
+        $items = Item::where('status', 1)->where('item_code', $request->item_code)->get();
+
+        for ($i = 0; $i < sizeof($items); $i++)
+        {
+            $item_code = $items[$i]->item_code;
+
+            $result[$i]['item_code'] = $item_code;
+            $result[$i]['item_name'] = $items[$i]->name;
+            $result[$i]['item_image'] = $items[$i]->image;
+
+            if(sizeof($stockAwal) > 0)
+            {
+                $result[$i]['saldo_qty']        = $stockAwal[0]->saldo_qty;
+                $result[$i]['saldo_nominal']    = $stockAwal[0]->saldo_nominal;
+                $result[$i]['value']            = $stockAwal[0]->value;
+            }
+            else
+            {
+                $result[$i]['saldo_qty']        = 0;
+                $result[$i]['saldo_nominal']    = 0;
+                $result[$i]['value']            = 0;
+            }
+
+            $saldoQty               = $result[$i]['saldo_qty'];
+            $saldoNominal           = $result[$i]['saldo_nominal'];
+            $result[$i]['items']    = [];
+
+            $value = 0;
+
+            for($j = 0; $j < sizeof($stock); $j++)
+            {
+                $saldoQty = $saldoQty + ($stock[$j]->procurement_qty == null ? 0 : $stock[$j]->procurement_qty) - ($stock[$j]->sales_qty == null ? 0 : $stock[$j]->sales_qty);
+                $saldoNominal = $saldoNominal + ($stock[$j]->procurement_total == null ? 0 : $stock[$j]->procurement_total) - ($stock[$j]->sales_total == null ? 0 : $stock[$j]->sales_total);
+                $result[$i]['items'][$j] = $stock[$j];
+
+                $result[$i]['items'][$j]->saldo_qty = $saldoQty;
+                $result[$i]['items'][$j]->saldo_nominal = $saldoNominal;
+
+                if ($value == 0)
+                {
+                    $value = $saldoNominal / $saldoQty;
+                }
+                else
+                {
+                    $value = $value * $saldoQty;
+                }
+
+                $result[$i]['items'][$j]->value = $value;
+            }
+        }
 
         return response()->json([
             "status"    => true,
-            "data"      => $stock
+            "data"      => $result
         ]);
     }
 }

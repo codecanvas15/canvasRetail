@@ -10,7 +10,9 @@ use App\Location;
 use App\Payment;
 use App\Sales;
 use App\SalesDetail;
+use DateTime;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 
 class SalesController extends Controller
@@ -92,6 +94,25 @@ class SalesController extends Controller
                 $paymentStatus = 'Unpaid';
             }
 
+            // document number
+            $date = new DateTime('now');
+            $month = $date->format('my');
+
+            Config::set('database.connections.'. config('database.default') .'.strict', false);
+            DB::reconnect();
+
+            $seq = DB::select(DB::raw("
+                SELECT
+                    count(doc_number) as seq
+                FROM
+                    sales
+                WHERE
+                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE('".$month."', '%m%y')
+                    AND doc_number IS NOT NULL
+            "));
+
+            $documentNumber = 'SO-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
+
             // insert sales
             $sales = Sales::create([
                 'contact_id' => $request->contact_id,
@@ -101,6 +122,7 @@ class SalesController extends Controller
                 'created_by' => auth()->user()->id,
                 'updated_by' => auth()->user()->id,
                 'status'     => 1,
+                'doc_number' => $documentNumber,
             ]);
 
             foreach ($request->items as $item)
@@ -164,6 +186,7 @@ class SalesController extends Controller
         }
         catch (\Throwable $th)
         {
+            dd($th);
             DB::rollBack();
 
             return response()->json([
@@ -219,11 +242,22 @@ class SalesController extends Controller
         {
             $sales = Sales::where('id', $id)->where('status', 1)->first();
 
-            $salesDet = SalesDetail::where('sales_id', $id)->where('status', 1)->get();
+            $contact = Contact::where('id', $sales->contact_id)->select('name')->first();
+
+            $salesDet = DB::table('sales_details')
+                            ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
+                            ->join('items', 'items_details.item_code', '=', 'items.item_code')
+                            ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                            ->where('sales_details.sales_id', $id)
+                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.id as location_id')
+                            ->get();
 
             $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();
 
             $data = $sales;
+            $data['contact_name'] = $contact->name;
+            $data['location_id'] = $salesDet[0]->location_id;
+            $data['tax_ids'] = $salesDet[0]->tax_ids;
             $data['details'] = $salesDet;
             $data['payments'] = $paymentDet;
 

@@ -13,8 +13,10 @@ use App\ProcurementDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use DateTime;
 // use Barryvdh\DomPDF\Facade as PDF;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Config;
 
 class ProcurementController extends Controller
 {
@@ -98,6 +100,25 @@ class ProcurementController extends Controller
                 $paymentStatus = 'Unpaid';
             }
 
+            // document number
+            $date = new DateTime('now');
+            $month = $date->format('my');
+
+            Config::set('database.connections.'. config('database.default') .'.strict', false);
+            DB::reconnect();
+
+            $seq = DB::select(DB::raw("
+                SELECT
+                    count(doc_number) as seq
+                FROM
+                    procurements
+                WHERE
+                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE('".$month."', '%m%y')
+                    AND doc_number IS NOT NULL
+            "));
+
+            $documentNumber = 'PR-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
+
             // insert procurement
             $procurement = Procurement::create([
                 'contact_id'        => $request->contact_id,
@@ -107,6 +128,7 @@ class ProcurementController extends Controller
                 'created_by'        => auth()->user()->id,
                 'updated_by'        => auth()->user()->id,
                 'status'            => 1,
+                'doc_number'    => $documentNumber
             ]);
 
             foreach ($request->items as $item)
@@ -225,11 +247,20 @@ class ProcurementController extends Controller
         {
             $procurement = Procurement::where('id', $id)->where('status', 1)->first();
 
-            $procurementDet = ProcurementDetail::where('procurement_id', $id)->where('status', 1)->get();
+            $contact = Contact::where('id', $procurement->contact_id)->select('name')->first();
+
+            $procurementDet = DB::table('procurement_details')
+                            ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
+                            ->join('items', 'items_details.item_code', '=', 'items.item_code')
+                            ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                            ->where('procurement_details.procurement_id', $id)
+                            ->select('items.item_code', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.total', 'procurement_details.tax_ids', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name')
+                            ->get();
 
             $paymentDet = Payment::where('procurement_id', $id)->where('status', 1)->get();
 
             $data = $procurement;
+            $data['contact_name'] = $contact->name;
             $data['details'] = $procurementDet;
             $data['payments'] = $paymentDet;
 

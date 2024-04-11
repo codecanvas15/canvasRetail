@@ -18,5 +18,6 @@ class Sales extends XModel
         'created_by',
         'updated_by',
         'status',
+        'doc_number',
     ];
 }
