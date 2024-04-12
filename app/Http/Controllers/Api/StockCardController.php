@@ -365,7 +365,8 @@ class StockCardController extends Controller
                     $value = $saldoNominal / $saldoQty;
                 }
 
-                $value = sprintf("%01.2f",$value);
+                // $value = sprintf("%01.2f",$value);
+                $value = $value;
             }
 
             $stockList[$i]['saldo_qty']        = $saldoQty;
