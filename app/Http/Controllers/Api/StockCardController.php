@@ -350,7 +350,14 @@ class StockCardController extends Controller
                     $saldoNominal = $value * $saldoQty;
                 }
 
-                $value = $saldoNominal / $saldoQty;
+                if ($saldoQty == 0)
+                {
+                    $value = 0;
+                }
+                else
+                {
+                    $value = $saldoNominal / $saldoQty;
+                }
             }
 
             $stockList[$i]['saldo_qty']        = $saldoQty;
@@ -535,7 +542,15 @@ class StockCardController extends Controller
                     $result[$i]['items'][$j]->saldo_nominal = $value * $saldoQty;
                 }
 
-                $value = $saldoNominal / $saldoQty;
+                if ($saldoQty == 0)
+                {
+                    $value = 0;
+                }
+                else
+                {
+                    $value = $saldoNominal / $saldoQty;
+                }
+
                 $result[$i]['items'][$j]->value = $value;
             }
         }
