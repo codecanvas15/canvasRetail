@@ -339,7 +339,6 @@ class StockCardController extends Controller
             for($j = 0; $j < sizeof($item); $j++)
             {
                 $saldoQty = $saldoQty + ($item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ($item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty);
-                $saldoNominal = $saldoNominal + ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
 
                 if ($j == 0)
                 {
@@ -347,7 +346,14 @@ class StockCardController extends Controller
                 }
                 else
                 {
-                    $saldoNominal = $value * $saldoQty;
+                    if ($value == 0)
+                    {
+                        $saldoNominal = ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
+                    }
+                    else
+                    {
+                        $saldoNominal = $value * $saldoQty;
+                    }
                 }
 
                 if ($saldoQty == 0)
@@ -358,6 +364,8 @@ class StockCardController extends Controller
                 {
                     $value = $saldoNominal / $saldoQty;
                 }
+
+                $value = sprintf("%01.2f",$value);
             }
 
             $stockList[$i]['saldo_qty']        = $saldoQty;
@@ -535,11 +543,11 @@ class StockCardController extends Controller
 
                 if ($j == 0)
                 {
-                    $result[$i]['items'][$j]->saldo_nominal = $saldoNominal;
+                    $saldoNominal = $saldoNominal;
                 }
                 else
                 {
-                    $result[$i]['items'][$j]->saldo_nominal = $value * $saldoQty;
+                    $saldoNominal = $value * $saldoQty;
                 }
 
                 if ($saldoQty == 0)
@@ -551,7 +559,8 @@ class StockCardController extends Controller
                     $value = $saldoNominal / $saldoQty;
                 }
 
-                $result[$i]['items'][$j]->value = $value;
+                $result[$i]['items'][$j]->saldo_nominal = $saldoNominal;
+                $result[$i]['items'][$j]->value = sprintf("%01.2f",$value);
             }
         }
 
