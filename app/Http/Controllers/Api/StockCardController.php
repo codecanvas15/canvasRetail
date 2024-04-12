@@ -336,24 +336,18 @@ class StockCardController extends Controller
                 return $k->item_code == $item_code;
             }));
 
+
             for($j = 0; $j < sizeof($item); $j++)
             {
                 $saldoQty = $saldoQty + ($item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ($item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty);
 
-                if ($j == 0)
+                if ($value == 0)
                 {
-                    $saldoNominal = $saldoNominal;
+                    $saldoNominal = ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
                 }
                 else
                 {
-                    if ($value == 0)
-                    {
-                        $saldoNominal = ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
-                    }
-                    else
-                    {
-                        $saldoNominal = $value * $saldoQty;
-                    }
+                    $saldoNominal = $value * $saldoQty;
                 }
 
                 if ($saldoQty == 0)
@@ -364,13 +358,10 @@ class StockCardController extends Controller
                 {
                     $value = $saldoNominal / $saldoQty;
                 }
-
-                // $value = sprintf("%01.2f",$value);
-                $value = $value;
             }
 
             $stockList[$i]['saldo_qty']        = $saldoQty;
-            $stockList[$i]['saldo_nominal']    = $saldoNominal;
+            $stockList[$i]['saldo_nominal']    = sprintf("%01.2f",$saldoNominal);
         }
 
         return response()->json([
