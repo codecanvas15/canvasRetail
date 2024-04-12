@@ -198,26 +198,31 @@ class StockCardController extends Controller
         Config::set('database.connections.'. config('database.default') .'.strict', false);
         DB::reconnect();
 
-        $stockList = DB::select(DB::raw("
+        $stock = DB::select(DB::raw("
             SELECT
-                i.item_code,
-                i.name as item_name,
-                i.image as item_image,
-                (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))) as saldo_qty,
-                (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal,
-                ((sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0)))/(sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0)))) as value
-            FROM
-            items i
-            LEFT JOIN (
+                a.item_code,
+                a.item_name,
+                a.location_name,
+                a.procurement_date,
+                a.procurement_qty,
+                a.procurement_total,
+                a.sales_date,
+                a.sales_qty,
+                a.sales_total
+            FROM (
                 SELECT
                     i.item_code,
                     i.name as item_name,
-                    i.image as item_image,
+                    l.name as location_name,
+                    p.procurement_date,
                     pd.qty as procurement_qty,
+                    pd.price as procurement_price,
                     pd.total as procurement_total,
+                    null as sales_date,
                     null as sales_qty,
+                    null as sales_price,
                     null as sales_total,
-                    p.procurement_date as created_at
+                    pd.created_at as created_at
                 FROM
                     items i
                     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -230,12 +235,16 @@ class StockCardController extends Controller
                 SELECT
                     i.item_code,
                     i.name as item_name,
-                    i.image as item_image,
+                    l.name as location_name,
+                    null procurement_date,
                     null as procurement_qty,
+                    null as procurement_price,
                     null as procurement_total,
+                    s.sales_date,
                     sd.qty as sales_qty,
+                    sd.price as sales_price,
                     sd.total as sales_total,
-                    s.sales_date as created_at
+                    sd.created_at as created_at
                 FROM
                     items i
                     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -244,10 +253,109 @@ class StockCardController extends Controller
                     JOIN locations l ON id.location_id = l.id and l.status = 1
                 WHERE
                     i.status = 1
-            ) a ON i.item_code = a.item_code and DATE_FORMAT(a.created_at, '%m-%Y') <= STR_TO_DATE('" . $filterMonth ."', '%m-%Y')
-            GROUP BY i.item_code
-            ORDER BY i.item_code
+            ) a
+            WHERE
+                (a.procurement_date >= STR_TO_DATE('" . $filterMonth ."', '%m-%Y') or a.sales_date >= STR_TO_DATE('" . $filterMonth ."', '%m-%Y'))
+            ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
         "));
+
+
+        $stockAwal = DB::select(DB::raw("
+            SELECT
+                a.item_code,
+                (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))) as saldo_qty,
+                (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal
+            FROM (
+                SELECT
+                    i.item_code,
+                    pd.qty as procurement_qty,
+                    pd.total as procurement_total,
+                    null as sales_qty,
+                    null as sales_total,
+                    p.procurement_date as tx_date,
+                    p.created_at as created_at
+                FROM
+                    items i
+                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
+                    RIGHT JOIN procurement_details pd ON id.id = pd.item_detail_id and pd.status = 1
+                    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status = 1
+                    JOIN locations l ON id.location_id = l.id and l.status = 1
+                WHERE
+                    i.status = 1
+                UNION ALL
+                SELECT
+                    i.item_code,
+                    null as procurement_qty,
+                    null as procurement_total,
+                    sd.qty as sales_qty,
+                    sd.total as sales_total,
+                    s.sales_date as tx_date,
+                    s.created_at created_at
+                FROM
+                    items i
+                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
+                    RIGHT JOIN sales_details sd ON id.id = sd.item_detail_id and sd.status = 1
+                    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status = 1
+                    JOIN locations l ON id.location_id = l.id and l.status = 1
+                WHERE
+                    i.status = 1
+            ) a
+            WHERE
+                a.tx_date <= STR_TO_DATE('" . $filterMonth . "', '%m-%Y')
+            GROUP BY a.item_code
+            ORDER BY a.item_code, a.created_at
+        "));
+
+        $stockList = [];
+
+        $items = Item::where('status', 1)->get();
+
+        for ($i = 0; $i < sizeof($items); $i++)
+        {
+            $item_code = $items[$i]->item_code;
+
+            $item = array_values(array_filter($stockAwal, function($k) use ($item_code) {
+                return $k->item_code == $item_code;
+            }));
+
+            $stockList[$i]['item_code'] = $item_code;
+            $stockList[$i]['item_name'] = $items[$i]->name;
+            $stockList[$i]['item_image'] = $items[$i]->image;
+
+            $saldoQty       = 0;
+            $saldoNominal   = 0;
+            $value = 0;
+
+            if(sizeof($stockAwal) > 0)
+            {
+                $saldoQty        = $stockAwal[0]->saldo_qty;
+                $saldoNominal    = $stockAwal[0]->saldo_nominal;
+            }
+
+            $item = array_values(array_filter($stock, function($k) use ($item_code) {
+                return $k->item_code == $item_code;
+            }));
+
+            for($j = 0; $j < sizeof($item); $j++)
+            {
+                $saldoQty = $saldoQty + ($item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ($item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty);
+                $saldoNominal = $saldoNominal + ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
+
+                if ($j == 0)
+                {
+                    $saldoNominal = $saldoNominal;
+                }
+                else
+                {
+                    $saldoNominal = $value * $saldoQty;
+                }
+
+                $value = $saldoNominal / $saldoQty;
+            }
+
+            $stockList[$i]['saldo_qty']        = $saldoQty;
+            $stockList[$i]['saldo_nominal']    = $saldoNominal;
+        }
 
         return response()->json([
             "status"    => true,
@@ -338,8 +446,7 @@ class StockCardController extends Controller
             SELECT
                 a.item_code,
                 (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))) as saldo_qty,
-                (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal,
-                ((sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0)))/(sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0)))) as value
+                (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal
             FROM (
                 SELECT
                     i.item_code,
@@ -398,13 +505,11 @@ class StockCardController extends Controller
             {
                 $result[$i]['saldo_qty']        = $stockAwal[0]->saldo_qty;
                 $result[$i]['saldo_nominal']    = $stockAwal[0]->saldo_nominal;
-                $result[$i]['value']            = $stockAwal[0]->value;
             }
             else
             {
                 $result[$i]['saldo_qty']        = 0;
                 $result[$i]['saldo_nominal']    = 0;
-                $result[$i]['value']            = 0;
             }
 
             $saldoQty               = $result[$i]['saldo_qty'];
@@ -420,17 +525,17 @@ class StockCardController extends Controller
                 $result[$i]['items'][$j] = $stock[$j];
 
                 $result[$i]['items'][$j]->saldo_qty = $saldoQty;
-                $result[$i]['items'][$j]->saldo_nominal = $saldoNominal;
 
-                if ($value == 0)
+                if ($j == 0)
                 {
-                    $value = $saldoNominal / $saldoQty;
+                    $result[$i]['items'][$j]->saldo_nominal = $saldoNominal;
                 }
                 else
                 {
-                    $value = $value * $saldoQty;
+                    $result[$i]['items'][$j]->saldo_nominal = $value * $saldoQty;
                 }
 
+                $value = $saldoNominal / $saldoQty;
                 $result[$i]['items'][$j]->value = $value;
             }
         }
