@@ -103,19 +103,18 @@ class ProcurementController extends Controller
             // document number
             $date = new DateTime('now');
             $month = $date->format('my');
-
             Config::set('database.connections.'. config('database.default') .'.strict', false);
             DB::reconnect();
 
-            $seq = DB::select(DB::raw("
+            $seq = DB::select("
                 SELECT
                     count(doc_number) as seq
                 FROM
                     procurements
                 WHERE
-                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE('".$month."', '%m%y')
+                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
                     AND doc_number IS NOT NULL
-            "));
+            ", [$month]);
 
             $documentNumber = 'PR-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
 
@@ -128,7 +127,7 @@ class ProcurementController extends Controller
                 'created_by'        => auth()->user()->id,
                 'updated_by'        => auth()->user()->id,
                 'status'            => 1,
-                'doc_number'    => $documentNumber
+                'doc_number'        => $documentNumber
             ]);
 
             foreach ($request->items as $item)
@@ -192,6 +191,7 @@ class ProcurementController extends Controller
         }
         catch (\Throwable $e)
         {
+            dd($e);
             DB::rollBack();
 
             return response()->json([
@@ -231,13 +231,31 @@ class ProcurementController extends Controller
         }
     }
 
-    public function getProcurement()
+    public function getProcurement(Request $request)
     {
-        $procurements = Procurement::where('status', 1)->get();
+        $sortBy = $request->input('sort_by', 'procurement_date');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Procurement::query();
+        $procurement = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+        $procurement->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
 
         return response()->json([
-            "status"    => true,
-            "data"      => $procurements
+            'status' => true,
+            'data' => $procurement->items(),
+            'pagination' => [
+                'current_page' => $procurement->currentPage(),
+                'total_pages' => $procurement->lastPage(),
+                'next_page' => $procurement->nextPageUrl(),
+                'prev_page' => $procurement->previousPageUrl(),
+            ],
         ]);
     }
 

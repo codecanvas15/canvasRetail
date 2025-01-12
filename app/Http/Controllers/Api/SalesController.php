@@ -101,15 +101,15 @@ class SalesController extends Controller
             Config::set('database.connections.'. config('database.default') .'.strict', false);
             DB::reconnect();
 
-            $seq = DB::select(DB::raw("
+            $seq = DB::select("
                 SELECT
                     count(doc_number) as seq
                 FROM
                     sales
                 WHERE
-                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE('".$month."', '%m%y')
+                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
                     AND doc_number IS NOT NULL
-            "));
+            ", [$month]);
 
             $documentNumber = 'SO-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
 
@@ -169,7 +169,7 @@ class SalesController extends Controller
             Payment::create([
                 'sales_id'      => $sales->id,
                 'type'          => "OUT",
-                'amount'        => $request->pay_amount,
+                'amount'        => $request->pay_amount ?? 0,
                 'pay_date'      => date("Y-m-d H:i:s"),
                 'created_by'    => auth()->user()->id,
                 'updated_by'    => auth()->user()->id,
@@ -226,13 +226,31 @@ class SalesController extends Controller
         }
     }
 
-    public function getSales()
+    public function getSales(Request $request)
     {
-        $sales = Sales::where('status', 1)->get();
+        $sortBy = $request->input('sort_by', 'sales_date');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Sales::query();
+        $sales = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+        $sales->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
 
         return response()->json([
-            "status"    => true,
-            "data"      => $sales
+            'status' => true,
+            'data' => $sales->items(),
+            'pagination' => [
+                'current_page' => $sales->currentPage(),
+                'total_pages' => $sales->lastPage(),
+                'next_page' => $sales->nextPageUrl(),
+                'prev_page' => $sales->previousPageUrl(),
+            ],
         ]);
     }
 
