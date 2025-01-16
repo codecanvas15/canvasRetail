@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BankController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\LocationController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Api\ProcurementController;
 use App\Http\Controllers\Api\RefundController;
 use App\Http\Controllers\Api\SalesController;
 use App\Http\Controllers\Api\StockCardController;
+use App\Http\Controllers\Api\StockOpnameController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +73,13 @@ Route::group([
     Route::post("contact/{id}",[ContactController::class, "updateContact"]);
     Route::delete("contact/{id}",[ContactController::class, "deleteContact"]);
 
+    // bank
+    Route::post("bank", [BankController::class, "addBank"]);
+    Route::get("bank", [BankController::class, "getBank"]);
+    Route::get("bank/{id}", [BankController::class, "getBankById"]);
+    Route::post("bank/{id}", [BankController::class, "updateBank"]);
+    Route::delete("bank/{id}", [BankController::class, "deleteBank"]);
+
     // transactions
     // procurement
     Route::post("procurement", [ProcurementController::class, "addProcurement"]);
@@ -94,6 +103,8 @@ Route::group([
     // refund
     Route::post("refund", [RefundController::class, "refund"]);
     Route::get("refund", [RefundController::class, "getRefund"]);
+
+    // stock opname
 
     // reports
     // stockcard
