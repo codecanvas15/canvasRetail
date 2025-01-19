@@ -7,15 +7,23 @@ use App\ItemDetail;
 use App\Location;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class LocationController extends Controller
 {
     //
     public function addLocation(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "name" => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         Location::create([
             'name'          => $request->name,
@@ -30,21 +38,46 @@ class LocationController extends Controller
         ]);
     }
 
-    public function getLocation()
+    public function getLocation(Request $request)
     {
-        $locations = Location::where('status', 1)->get();
+        $sortBy = $request->input('sort_by', 'name');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Location::query();
+        $locations = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->paginate(10);
+        $locations->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
 
         return response()->json([
-            "status" => true,
-            "data" => $locations
+            'status' => true,
+            'data' => $locations->items(),
+            'pagination' => [
+                'current_page' => $locations->currentPage(),
+                'total_pages' => $locations->lastPage(),
+                'next_page' => $locations->nextPageUrl(),
+                'prev_page' => $locations->previousPageUrl(),
+            ],
         ]);
     }
 
     public function updateLocation(Request $request, $id)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "name" => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         if (Location::where('id', $id)->exists())
         {

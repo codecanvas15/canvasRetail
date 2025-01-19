@@ -10,6 +10,7 @@ use App\Location;
 use App\Payment;
 use App\Procurement;
 use App\ProcurementDetail;
+use App\Tax;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
@@ -17,13 +18,14 @@ use DateTime;
 // use Barryvdh\DomPDF\Facade as PDF;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Validator;
 
 class ProcurementController extends Controller
 {
     //
     public function addProcurement(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "contact_id"        => "required",
             "location_id"       => "required",
             "total_amount"      => "required",
@@ -31,6 +33,13 @@ class ProcurementController extends Controller
             "procurement_date"  => "required",
             "pay_amount"        => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         if (!Contact::where('id', $request->contact_id)->where('status', 1)->exists())
         {
@@ -59,7 +68,6 @@ class ProcurementController extends Controller
                 array_push($errorMsg,'Item ' . $item['item_code'] . ' is not exist !');
             }
         }
-
 
         if ($error > 0)
         {
@@ -102,7 +110,7 @@ class ProcurementController extends Controller
 
             // document number
             $date = new DateTime('now');
-            $month = $date->format('my');
+            $month = $date->format('dmy');
             Config::set('database.connections.'. config('database.default') .'.strict', false);
             DB::reconnect();
 
@@ -112,11 +120,24 @@ class ProcurementController extends Controller
                 FROM
                     procurements
                 WHERE
-                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
+                    DATE_FORMAT(created_at, '%d%m%y') <= STR_TO_DATE(?, '%d%m%y')
                     AND doc_number IS NOT NULL
             ", [$month]);
 
             $documentNumber = 'PR-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
+
+            if ($request->rounding == 'up')
+            {
+                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_UP);
+            }
+            else if ($request->rounding == 'down')
+            {
+                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_DOWN);
+            }
+            else
+            {
+                $rounding = 0;
+            }
 
             // insert procurement
             $procurement = Procurement::create([
@@ -127,12 +148,23 @@ class ProcurementController extends Controller
                 'created_by'        => auth()->user()->id,
                 'updated_by'        => auth()->user()->id,
                 'status'            => 1,
-                'doc_number'        => $documentNumber
+                'doc_number'        => $documentNumber,
+                'rounding'          => $rounding
             ]);
 
             foreach ($request->items as $item)
             {
                 $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
+
+                if ($request->include_tax)
+                {
+                    $taxes = explode(',', $request->tax_ids);
+
+                    $tax = Tax::whereIn('id', $taxes)->sum('value');
+
+                    $itemPrice = round($item['price'] / (1 + $tax/100), 2);
+                }
+
 
                 // insert to item detail
                 if ($itemDet == null)
@@ -141,7 +173,7 @@ class ProcurementController extends Controller
                         'item_code'     => $item['item_code'],
                         'location_id'   => $request->location_id,
                         'qty'           => $item['qty'],
-                        'price'         => $item['price'],
+                        'price'         => $itemPrice,
                         'created_by'    => auth()->user()->id,
                         'updated_by'    => auth()->user()->id,
                         'status'        => 1
@@ -162,12 +194,13 @@ class ProcurementController extends Controller
                     'procurement_id'    => $procurement->id,
                     'item_detail_id'    => $itemDet['id'],
                     'qty'               => $item['qty'],
-                    'price'             => $item['price'],
+                    'price'             => $itemPrice,
                     'total'             => $item['total'],
                     'tax_ids'           => $request->tax_ids,
                     'created_by'        => auth()->user()->id,
                     'updated_by'        => auth()->user()->id,
                     'status'            => 1,
+                    'discount'          => $item['discount'] ?? null
                 ]);
             }
 
@@ -191,7 +224,6 @@ class ProcurementController extends Controller
         }
         catch (\Throwable $e)
         {
-            dd($e);
             DB::rollBack();
 
             return response()->json([
@@ -203,9 +235,16 @@ class ProcurementController extends Controller
 
     public function updateProcurement(Request $request, $id)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "delivery_status"    => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         if(Procurement::where('id', $id)->where('status', 1)->exists())
         {
@@ -272,7 +311,7 @@ class ProcurementController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('procurement_details.procurement_id', $id)
-                            ->select('items.item_code', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.total', 'procurement_details.tax_ids', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name')
+                            ->select('items.item_code', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.total', 'procurement_details.tax_ids', 'procurement_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name')
                             ->get();
 
             $paymentDet = Payment::where('procurement_id', $id)->where('status', 1)->get();
@@ -343,7 +382,6 @@ class ProcurementController extends Controller
 
     public function createPO(Request $request)
     {
-
         $path = public_path() . '/pdf/' . time() . '.pdf';
 
         $pdf = PDF::loadView('pdf');

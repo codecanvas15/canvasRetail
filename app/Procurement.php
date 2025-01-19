@@ -17,5 +17,6 @@ class Procurement extends XModel
         'updated_by',
         'status',
         'doc_number',
+        'rounding'
     ];
 }

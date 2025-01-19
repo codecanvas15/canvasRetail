@@ -17,9 +17,10 @@ class CreateProcurementsTable extends Migration
             $table->id();
             $table->unsignedBigInteger('contact_id');
             $table->timestamp('procurement_date');
-            $table->integer('amount');
+            $table->decimal('amount',10,2);
             $table->string('pay_status')->nullable();
             $table->string('delivery_status')->nullable();
+            $table->string('doc_number');
             $table->string('created_by');
             $table->timestamp('created_at')->nullable();
             $table->string('updated_by');

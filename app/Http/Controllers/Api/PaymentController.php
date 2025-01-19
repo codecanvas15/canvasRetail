@@ -8,16 +8,24 @@ use App\Procurement;
 use App\Sales;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class PaymentController extends Controller
 {
     // payment
     public function payment(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "amount"    => 'required',
             "pay_date"  => 'required'
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         if ($request->procurement_id != null && $request->sales_id != null)
         {
@@ -44,6 +52,15 @@ class PaymentController extends Controller
             if ($type == 'IN')
             {
                 $sales = Sales::where('id', $request->sales_id)->where('status', 1)->first();
+
+                if ($sales == null)
+                {
+                    return response()->json([
+                        "status" => false,
+                        "message" => "Sales not found"
+                    ], 404);
+                }
+
                 $payment = Payment::where('sales_id', $request->sales_id)->where('status', 1)->sum('amount');
 
                 $outstanding = $sales->amount - ($request->amount + $payment);
@@ -109,6 +126,15 @@ class PaymentController extends Controller
             else if ($type == 'OUT')
             {
                 $procurement = Procurement::where('id', $request->procurement_id)->where('status', 1)->first();
+
+                if ($procurement == null)
+                {
+                    return response()->json([
+                        "status" => false,
+                        "message" => "Procurement not found"
+                    ], 404);
+                }
+
                 $payment = Payment::where('procurement_id', $request->procurement_id)->where('status', 1)->sum('amount');
 
                 $outstanding = $procurement->amount - ($request->amount + $payment);
@@ -119,7 +145,7 @@ class PaymentController extends Controller
                 {
                     $paymentStatus = 'Partially Paid';
                 }
-                else if ($outstanding > $procurement->amount)
+                else if ($outstanding < $procurement->amount)
                 {
                     return response()->json([
                         "status" => false,
@@ -181,13 +207,31 @@ class PaymentController extends Controller
         }
     }
 
-    public function getPayment()
+    public function getPayment(Request $request)
     {
-        $payment = Payment::where('status', 1)->get();
+        $sortBy = $request->input('sort_by', 'pay_date');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Payment::query();
+        $payment = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->paginate(10);
+        $payment->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
 
         return response()->json([
-            "status" => true,
-            "data" => $payment
+            'status' => true,
+            'data' => $payment->items(),
+            'pagination' => [
+                'current_page' => $payment->currentPage(),
+                'total_pages' => $payment->lastPage(),
+                'next_page' => $payment->nextPageUrl(),
+                'prev_page' => $payment->previousPageUrl(),
+            ],
         ]);
     }
 }

@@ -10,23 +10,32 @@ use App\Location;
 use App\Payment;
 use App\Sales;
 use App\SalesDetail;
+use App\Tax;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class SalesController extends Controller
 {
     //
     public function addSales(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "contact_id"        => "required",
             "location_id"       => "required",
             "total_amount"      => "required",
             "items"             => "required",
             "sales_date"        => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         if (!Contact::where('id', $request->contact_id)->where('status', 1)->exists())
         {
@@ -113,6 +122,19 @@ class SalesController extends Controller
 
             $documentNumber = 'SO-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
 
+            if ($request->rounding == 'up')
+            {
+                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_UP);
+            }
+            else if ($request->rounding == 'down')
+            {
+                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_DOWN);
+            }
+            else
+            {
+                $rounding = 0;
+            }
+
             // insert sales
             $sales = Sales::create([
                 'contact_id' => $request->contact_id,
@@ -123,6 +145,9 @@ class SalesController extends Controller
                 'updated_by' => auth()->user()->id,
                 'status'     => 1,
                 'doc_number' => $documentNumber,
+                'rounding'   => $request->rounding,
+                'rounding'   => $rounding,
+                'bank_id'    => $request->bank_id
             ]);
 
             foreach ($request->items as $item)
@@ -163,12 +188,13 @@ class SalesController extends Controller
                     'created_by' => auth()->user()->id,
                     'updated_by' => auth()->user()->id,
                     'status' => 1,
+                    'discount' => $item['discount'] ?? null
                 ]);
             }
 
             Payment::create([
                 'sales_id'      => $sales->id,
-                'type'          => "OUT",
+                'type'          => "IN",
                 'amount'        => $request->pay_amount ?? 0,
                 'pay_date'      => date("Y-m-d H:i:s"),
                 'created_by'    => auth()->user()->id,
@@ -186,7 +212,6 @@ class SalesController extends Controller
         }
         catch (\Throwable $th)
         {
-            dd($th);
             DB::rollBack();
 
             return response()->json([
@@ -198,9 +223,16 @@ class SalesController extends Controller
 
     public function updateSales(Request $request, $id)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "delivery_status"    => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         if(Sales::where('id', $id)->where('status', 1)->exists())
         {
@@ -267,15 +299,13 @@ class SalesController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('sales_details.sales_id', $id)
-                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.id as location_id')
+                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.id as location_id')
                             ->get();
 
             $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();
 
             $data = $sales;
             $data['contact_name'] = $contact->name;
-            $data['location_id'] = $salesDet[0]->location_id;
-            $data['tax_ids'] = $salesDet[0]->tax_ids;
             $data['details'] = $salesDet;
             $data['payments'] = $paymentDet;
 

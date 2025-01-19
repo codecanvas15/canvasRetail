@@ -19,5 +19,6 @@ class SalesDetail extends XModel
         'created_by',
         'updated_by',
         'status',
+        'discount'
     ];
 }

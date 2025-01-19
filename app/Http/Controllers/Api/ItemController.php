@@ -14,10 +14,17 @@ class ItemController extends Controller
 {
     public function addItem(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "item_code" => "required|unique:items",
             "name" => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         $imagePath = '';
         if($request->image)
@@ -54,13 +61,31 @@ class ItemController extends Controller
         ]);
     }
 
-    public function getItem()
+    public function getItem(Request $request)
     {
-        $items = Item::where('status', 1)->get();
+        $sortBy = $request->input('sort_by', 'item_code');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Item::query();
+        $item = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->paginate(10);
+        $item->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
 
         return response()->json([
-            "status" => true,
-            "data" => $items
+            'status' => true,
+            'data' => $item->items(),
+            'pagination' => [
+                'current_page' => $item->currentPage(),
+                'total_pages' => $item->lastPage(),
+                'next_page' => $item->nextPageUrl(),
+                'prev_page' => $item->previousPageUrl(),
+            ],
         ]);
     }
 

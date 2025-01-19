@@ -19,5 +19,7 @@ class Sales extends XModel
         'updated_by',
         'status',
         'doc_number',
+        'rounding',
+        'bank_id'
     ];
 }

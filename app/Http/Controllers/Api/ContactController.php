@@ -5,19 +5,27 @@ namespace App\Http\Controllers\Api;
 use App\Contact;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ContactController extends Controller
 {
     //
     public function addContact(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "name"      => "required",
             "type"      => "required",
             "address"   => "required",
             "phone"     => "required",
             "email"     => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         Contact::create([
             'name'          => $request->name,
@@ -47,13 +55,31 @@ class ContactController extends Controller
         ]);
     }
 
-    public function getContact()
+    public function getContact(Request $request)
     {
-        $contacts = Contact::where('status', 1)->get();
+        $sortBy = $request->input('sort_by', 'name');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Contact::query();
+        $contacts = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->paginate(10);
+        $contacts->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
 
         return response()->json([
-            "status" => true,
-            "message" => $contacts
+            'status' => true,
+            'data' => $contacts->items(),
+            'pagination' => [
+                'current_page' => $contacts->currentPage(),
+                'total_pages' => $contacts->lastPage(),
+                'next_page' => $contacts->nextPageUrl(),
+                'prev_page' => $contacts->previousPageUrl(),
+            ],
         ]);
     }
 
@@ -65,7 +91,7 @@ class ContactController extends Controller
 
             return response()->json([
                 "status" => true,
-                "message" => $contact
+                "data" => $contact
             ]);
         }
         else

@@ -17,16 +17,19 @@ class CreateSalesTable extends Migration
             $table->id();
             $table->unsignedBigInteger('contact_id');
             $table->timestamp('sales_date');
-            $table->integer('amount');
+            $table->decimal('amount',10,2);
             $table->string('pay_status')->nullable();
             $table->string('delivery_status')->nullable();
+            $table->string('doc_number');
             $table->string('created_by');
             $table->timestamp('created_at')->nullable();
             $table->string('updated_by');
             $table->timestamp('updated_at')->nullable();
             $table->integer('status');
+            $table->unsignedBigInteger('bank_id');
 
             $table->foreign('contact_id')->references('id')->on('contacts');
+            $table->foreign('bank_id')->references('id')->on('banks');
         });
     }
 

@@ -18,7 +18,7 @@ class CreateItemsDetailsTable extends Migration
             $table->string('item_code');
             $table->unsignedBigInteger('location_id');
             $table->integer('qty');
-            $table->integer('price');
+            $table->decimal('price',10,2);
             $table->string('created_by');
             $table->timestamp('created_at')->nullable();
             $table->string('updated_by');

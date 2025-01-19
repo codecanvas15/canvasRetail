@@ -5,16 +5,24 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Tax;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class TaxController extends Controller
 {
     //
     public function addTax(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "name"  => "required",
             "value" => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         Tax::create([
             'name'          => $request->name,
@@ -32,11 +40,11 @@ class TaxController extends Controller
 
     public function getTax()
     {
-        $taxs = Tax::where('status', 1)->get();
+        $taxes = Tax::where('status', 1)->get();
 
         return response()->json([
             "status" => true,
-            "data" => $taxs
+            "data" => $taxes
         ]);
     }
 

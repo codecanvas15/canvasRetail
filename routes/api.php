@@ -30,14 +30,14 @@ use App\Http\Controllers\Api\StockOpnameController;
 // url/api/method
 Route::post("login", [AuthController::class, "login"]);
 Route::post("register", [AuthController::class, "register"]);
+Route::get("logout", [AuthController::class, "logout"]);
 
 Route::group([
     'middleware' => 'auth:api'
 ], function(){
     // auth
-    // Route::get("refreshToken", [AuthController::class, "refreshToken"]);
+    Route::get("refreshToken", [AuthController::class, "refreshToken"]);
     Route::get("profile", [AuthController::class, "profile"]);
-    Route::get("logout", [AuthController::class, "logout"]);
 
     // masters
     // User

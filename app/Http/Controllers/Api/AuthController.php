@@ -6,20 +6,28 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
     // User Register (POST, formdata)
-    public function register(Request $request){
-
+    public function register(Request $request)
+    {
         // data validation
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "name" => "required",
             "username" => "required|unique:users",
             "role" => "required",
             "password" => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         // User Model
         User::create([
@@ -40,13 +48,20 @@ class AuthController extends Controller
     }
 
     // User Login (POST, formdata)
-    public function login(Request $request){
-
+    public function login(Request $request)
+    {
         // data validation
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "username" => "required",
             "password" => "required"
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         // JWTAuth
         $token = JWTAuth::attempt([
@@ -99,7 +114,15 @@ class AuthController extends Controller
     }
 
     // User Logout (GET)
-    public function logout(){
+    public function logout()
+    {
+        if (auth()->user() == null)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not logged in. Please authenticate to continue.',
+            ], 401);
+        }
 
         auth()->logout();
 

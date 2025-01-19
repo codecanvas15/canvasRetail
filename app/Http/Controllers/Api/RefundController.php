@@ -8,15 +8,23 @@ use App\Procurement;
 use App\Sales;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class RefundController extends Controller
 {
     // refund
     public function refund(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             "payment_id"    => 'required'
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                "status" => false,
+                "message" => $validator->errors()
+            ]);
+        }
 
         if (Payment::where('id', $request->payment_id)->where('status', 1)->exists())
         {
@@ -43,15 +51,15 @@ class RefundController extends Controller
                     ]);
 
                     $procurement = Procurement::where('id', $payment->procurement_id)->where('status', 1)->first();
-                    $payment = Payment::where('procurement_id', $payment->procurement_id)->where('status', 1)->where('type', 'not like', 'REFUND')->sum('amount');
+                    $paymentTotal = Payment::where('procurement_id', $payment->procurement_id)->where('status', 1)->where('type', 'not like', 'REFUND')->sum('amount');
 
                     $paymentStatus = '';
 
-                    if($payment >= $procurement->amount)
+                    if($paymentTotal >= $procurement->amount)
                     {
                         $paymentStatus = 'Paid';
                     }
-                    else if ($payment == 0)
+                    else if ($paymentTotal == 0)
                     {
                         $paymentStatus = 'Unpaid';
                     }
@@ -81,15 +89,15 @@ class RefundController extends Controller
                     ]);
 
                     $sales = Sales::where('id', $payment->sales_id)->where('status', 1)->first();
-                    $payment = Payment::where('sales_id', $payment->sales_id)->where('status', 1)->where('type', 'not like', 'REFUND')->sum('amount');
+                    $paymentTotal = Payment::where('sales_id', $payment->sales_id)->where('status', 1)->where('type', 'not like', 'REFUND')->sum('amount');
 
                     $paymentStatus = '';
 
-                    if($payment >= $sales->amount)
+                    if($paymentTotal >= $sales->amount)
                     {
                         $paymentStatus = 'Paid';
                     }
-                    else if ($payment == 0)
+                    else if ($paymentTotal == 0)
                     {
                         $paymentStatus = 'Unpaid';
                     }
@@ -105,6 +113,12 @@ class RefundController extends Controller
                     ]);
                 }
 
+                $payment->update([
+                    'status'         => 0,
+                    'updated_by'     => auth()->user()->id,
+                    'updated_at'     => date("Y-m-d H:i:s")
+                ]);
+
                 DB::commit();
 
                 return response()->json([
@@ -114,6 +128,7 @@ class RefundController extends Controller
             }
             catch (\Throwable $th)
             {
+                dd($th);
                 DB::rollBack();
 
                 return response()->json([
@@ -131,13 +146,31 @@ class RefundController extends Controller
         }
     }
 
-    public function getRefund()
+    public function getRefund(Request $request)
     {
-        $refund = Payment::where('status', 1)->where('type', 'REFUND')->get();
+        $sortBy = $request->input('sort_by', 'pay_date');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Payment::query();
+        $payment = $query->where('status', 1)->where('type', 'REFUND')->orderBy($sortBy, $sortOrder)->paginate(10);
+        $payment->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
 
         return response()->json([
-            "status" => true,
-            "data" => $refund
+            'status' => true,
+            'data' => $payment->items(),
+            'pagination' => [
+                'current_page' => $payment->currentPage(),
+                'total_pages' => $payment->lastPage(),
+                'next_page' => $payment->nextPageUrl(),
+                'prev_page' => $payment->previousPageUrl(),
+            ],
         ]);
     }
 }
