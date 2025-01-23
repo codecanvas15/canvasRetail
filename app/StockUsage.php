@@ -12,7 +12,7 @@ class StockUsage extends Model
     protected $table = 'stock_usage';
 
     protected $fillable = [
-        'item_code',
+        'item_detail_id',
         'location_id',
         'user_item_name',
         'qty',

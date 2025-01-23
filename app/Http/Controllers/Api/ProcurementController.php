@@ -28,7 +28,6 @@ class ProcurementController extends Controller
         $validator = Validator::make($request->all(), [
             "contact_id"        => "required",
             "location_id"       => "required",
-            "total_amount"      => "required",
             "items"             => "required",
             "procurement_date"  => "required",
             "pay_amount"        => "required"
@@ -84,30 +83,6 @@ class ProcurementController extends Controller
 
             $procurementDate = date('Y-m-d H:i:s',$date);
 
-            $outstanding = $request->total_amount - $request->pay_amount;
-
-            $paymentStatus = '';
-            if ($outstanding > 0)
-            {
-                $paymentStatus = 'Partially Paid';
-            }
-            else if ($outstanding < 0)
-            {
-                return response()->json([
-                    "status" => false,
-                    "message" => "Total Payment amount is greater than procurement amount."
-                ], 400);
-            }
-            else if ($outstanding == 0)
-            {
-                $paymentStatus = 'Paid';
-            }
-
-            if ($request->pay_amount == 0)
-            {
-                $paymentStatus = 'Unpaid';
-            }
-
             // document number
             $date = new DateTime('now');
             $month = $date->format('dmy');
@@ -125,31 +100,31 @@ class ProcurementController extends Controller
             ", [$month]);
 
             $documentNumber = 'PR-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
+            
+            $taxes = explode(',', $request->tax_ids);
 
-            if ($request->rounding == 'up')
-            {
-                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_UP);
-            }
-            else if ($request->rounding == 'down')
-            {
-                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_DOWN);
-            }
-            else
-            {
-                $rounding = 0;
-            }
+            $tax = Tax::whereIn('id', $taxes)->sum('value');
 
+            // if ($request->include_tax)
+            // {
+            //     $totalAmount = $request->total_amount;
+            // }
+            // else
+            // {
+            //     $totalAmount = round($request->total_amount / (1 + $tax/100), 0, $rounding);
+            // }
+
+            $totalAmount = 0;
             // insert procurement
             $procurement = Procurement::create([
                 'contact_id'        => $request->contact_id,
                 'procurement_date'  => $procurementDate,
-                'amount'            => $request->total_amount,
-                'pay_status'        => $paymentStatus,
+                'amount'            => 0,
+                'pay_status'        => null,
                 'created_by'        => auth()->user()->id,
                 'updated_by'        => auth()->user()->id,
                 'status'            => 1,
-                'doc_number'        => $documentNumber,
-                'rounding'          => $rounding
+                'doc_number'        => $documentNumber
             ]);
 
             foreach ($request->items as $item)
@@ -158,13 +133,8 @@ class ProcurementController extends Controller
 
                 if ($request->include_tax)
                 {
-                    $taxes = explode(',', $request->tax_ids);
-
-                    $tax = Tax::whereIn('id', $taxes)->sum('value');
-
                     $itemPrice = round($item['price'] / (1 + $tax/100), 2);
                 }
-
 
                 // insert to item detail
                 if ($itemDet == null)
@@ -195,14 +165,60 @@ class ProcurementController extends Controller
                     'item_detail_id'    => $itemDet['id'],
                     'qty'               => $item['qty'],
                     'price'             => $itemPrice,
-                    'total'             => $item['total'],
+                    'total'             => round(($item['qty'] * $itemPrice), 2),
                     'tax_ids'           => $request->tax_ids,
                     'created_by'        => auth()->user()->id,
                     'updated_by'        => auth()->user()->id,
                     'status'            => 1,
-                    'discount'          => $item['discount'] ?? null
+                    'discount'          => $item['discount'] ?? 0 ? ($item['discount']/100) * ($item['qty'] * $itemPrice) : 0
                 ]);
+
+                $totalAmount += (($item['qty'] * $itemPrice) + ($item['qty'] * $itemPrice) * ($tax/100));
             }
+
+            if ($request->rounding === 'down') 
+            {
+                $roundedAmount = floor($totalAmount);
+            } 
+            elseif ($request->rounding === 'up') 
+            {
+                $roundedAmount = ceil($totalAmount);
+            } 
+            else 
+            {
+                $roundedAmount = round($totalAmount);
+            }
+
+            $outstanding = $roundedAmount - $request->pay_amount;
+
+            $paymentStatus = '';
+            if ($outstanding > 0)
+            {
+                $paymentStatus = 'Partially Paid';
+            }
+            else if ($outstanding < 0)
+            {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Total Payment amount is greater than procurement amount."
+                ], 400);
+            }
+            else if ($outstanding == 0)
+            {
+                $paymentStatus = 'Paid';
+            }
+
+            if ($request->pay_amount == 0)
+            {
+                $paymentStatus = 'Unpaid';
+            }
+
+            $procurement->update([
+                'amount'        => $roundedAmount,
+                'pay_status'    => $paymentStatus,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
 
             Payment::create([
                 'procurement_id'=> $procurement->id,

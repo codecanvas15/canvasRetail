@@ -13,8 +13,10 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProcurementController;
 use App\Http\Controllers\Api\RefundController;
 use App\Http\Controllers\Api\SalesController;
+use App\Http\Controllers\Api\StockAdjustmentController;
 use App\Http\Controllers\Api\StockCardController;
-use App\Http\Controllers\Api\StockOpnameController;
+use App\Http\Controllers\Api\StockUsageController;
+use App\StockUsage;
 
 /*
 |--------------------------------------------------------------------------
@@ -105,11 +107,20 @@ Route::group([
     Route::get("refund", [RefundController::class, "getRefund"]);
 
     // stock opname
+    // stock adjustment
+    Route::post("stockadjustment", [StockAdjustmentController::class, "adjustment"]);
+    Route::get("stockadjustment", [StockAdjustmentController::class, "getAdjustment"]);
+    Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"]);
+    
+    // stock usage
+    Route::post("stockusage", [StockUsageController::class, "usage"]);
+    Route::get("stockusage", [StockUsageController::class, "getUsage"]);
+    Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"]);
 
     // reports
     // stockcard
-    Route::get("stockcard", [StockCardController::class, "getStockCard"]);
     Route::get("stockcardList", [StockCardController::class, "getStockCardList"]);
     Route::get("stockcardDetails", [StockCardController::class, "getStockCardDetails"]);
+
 });
 

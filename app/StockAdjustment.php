@@ -12,13 +12,14 @@ class StockAdjustment extends Model
     protected $table = 'stock_adjustment';
 
     protected $fillable = [
-        'item_code',
+        'item_detail_id',
         'location_id',
         'qty',
         'transaction_date',
         'created_by',
         'updated_by',
-        'status'
+        'status',
+        'reason'
     ];
 
 }

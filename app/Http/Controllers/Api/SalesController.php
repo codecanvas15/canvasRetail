@@ -25,7 +25,6 @@ class SalesController extends Controller
         $validator = Validator::make($request->all(), [
             "contact_id"        => "required",
             "location_id"       => "required",
-            "total_amount"      => "required",
             "items"             => "required",
             "sales_date"        => "required"
         ]);
@@ -79,30 +78,6 @@ class SalesController extends Controller
             $date = strtotime($request->sales_date);
             $salesDate = date('Y-m-d H:i:s',$date);
 
-            $outstanding = $request->total_amount - $request->pay_amount;
-
-            $paymentStatus = '';
-            if ($outstanding > 0)
-            {
-                $paymentStatus = 'Partially Paid';
-            }
-            else if ($outstanding < 0)
-            {
-                return response()->json([
-                    "status" => false,
-                    "message" => "Total Payment amount is greater than sales amount."
-                ], 400);
-            }
-            else if ($outstanding == 0)
-            {
-                $paymentStatus = 'Paid';
-            }
-
-            if ($request->pay_amount == 0)
-            {
-                $paymentStatus = 'Unpaid';
-            }
-
             // document number
             $date = new DateTime('now');
             $month = $date->format('my');
@@ -122,33 +97,20 @@ class SalesController extends Controller
 
             $documentNumber = 'SO-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
 
-            if ($request->rounding == 'up')
-            {
-                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_UP);
-            }
-            else if ($request->rounding == 'down')
-            {
-                $rounding = round($request->total_amount, 0, PHP_ROUND_HALF_DOWN);
-            }
-            else
-            {
-                $rounding = 0;
-            }
-
             // insert sales
             $sales = Sales::create([
                 'contact_id' => $request->contact_id,
                 'sales_date' => $salesDate,
-                'amount'     => $request->total_amount,
-                'pay_status' => $paymentStatus,
+                'amount'     => 0,
+                'pay_status' => null,
                 'created_by' => auth()->user()->id,
                 'updated_by' => auth()->user()->id,
                 'status'     => 1,
                 'doc_number' => $documentNumber,
-                'rounding'   => $request->rounding,
-                'rounding'   => $rounding,
-                'bank_id'    => $request->bank_id
+                'bank_id'    => $request->bank_id ?? null
             ]);
+
+            $totalAmount = 0;
 
             foreach ($request->items as $item)
             {
@@ -183,14 +145,60 @@ class SalesController extends Controller
                     'item_detail_id' => $itemDet['id'],
                     'qty' => $item['qty'],
                     'price' => $item['price'],
-                    'total' => $item['total'],
+                    'total' => $item['qty'] * $item['price'],
                     'tax_ids' => $request->tax_ids,
                     'created_by' => auth()->user()->id,
                     'updated_by' => auth()->user()->id,
                     'status' => 1,
-                    'discount' => $item['discount'] ?? null
+                    'discount' => $item['discount'] ?? 0 ? ($item['discount']/100) * ($item['qty'] * $item['price']) : 0
                 ]);
+
+                $totalAmount += $item['qty'] * $item['price'];
             }
+
+            if ($request->rounding === 'down') 
+            {
+                $roundedAmount = floor($totalAmount);
+            } 
+            elseif ($request->rounding === 'up') 
+            {
+                $roundedAmount = ceil($totalAmount);
+            } 
+            else 
+            {
+                $roundedAmount = round($totalAmount);
+            }
+
+            $outstanding = $roundedAmount - $request->pay_amount;
+
+            $paymentStatus = '';
+            if ($outstanding > 0)
+            {
+                $paymentStatus = 'Partially Paid';
+            }
+            else if ($outstanding < 0)
+            {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Total Payment amount is greater than procurement amount."
+                ], 400);
+            }
+            else if ($outstanding == 0)
+            {
+                $paymentStatus = 'Paid';
+            }
+
+            if ($request->pay_amount == 0)
+            {
+                $paymentStatus = 'Unpaid';
+            }
+
+            $sales->update([
+                'amount'        => $roundedAmount,
+                'pay_status'    => $paymentStatus,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
 
             Payment::create([
                 'sales_id'      => $sales->id,
