@@ -53,114 +53,13 @@ class StockCardController extends Controller
                 a.adjustment_qty,
                 a.usage_date,
                 a.usage_qty
-            FROM (
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    p.procurement_date,
-                    pd.qty as procurement_qty,
-                    pd.price as procurement_price,
-                    pd.total as procurement_total,
-                    null as sales_date,
-                    null as sales_qty,
-                    null as sales_price,
-                    null as sales_total,
-                    null as adjustment_date,
-                    null as adjustment_qty,
-                    null as usage_date,
-                    null as usage_qty,
-                    pd.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN procurement_details pd ON id.id = pd.item_detail_id and pd.status = 1
-                    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    null procurement_date,
-                    null as procurement_qty,
-                    null as procurement_price,
-                    null as procurement_total,
-                    s.sales_date,
-                    sd.qty as sales_qty,
-                    sd.price as sales_price,
-                    sd.total as sales_total,
-                    null as adjustment_date,
-                    null as adjustment_qty,
-                    null as usage_date,
-                    null as usage_qty,
-                    sd.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN sales_details sd ON id.id = sd.item_detail_id and sd.status = 1
-                    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    null as procurement_date,
-                    null as procurement_qty,
-                    null as procurement_price,
-                    null as procurement_total,
-                    null as sales_date,
-                    null as sales_qty,
-                    null as sales_price,
-                    null as sales_total,
-                    sa.transaction_date as adjustment_date,
-                    sa.qty as adjustment_qty,
-                    null as usage_date,
-                    null as usage_qty,
-                    sa.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_adjustment sa ON id.id = sa.item_detail_id and sa.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    null as procurement_date,
-                    null as procurement_qty,
-                    null as procurement_price,
-                    null as procurement_total,
-                    null as sales_date,
-                    null as sales_qty,
-                    null as sales_price,
-                    null as sales_total,
-                    null as adjustment_date,
-                    null as adjustment_qty,
-                    su.transaction_date as usage_date,
-                    su.qty as usage_qty,
-                    su.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_usage su ON id.id = su.item_detail_id and su.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                ) a
-                WHERE
-                    a.procurement_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.sales_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.adjustment_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.usage_date >= STR_TO_DATE(?, '%m-%Y')
+            FROM 
+                stock_value a
+            WHERE
+                a.procurement_date >= STR_TO_DATE(?, '%m-%Y')
+                or a.sales_date >= STR_TO_DATE(?, '%m-%Y')
+                or a.adjustment_date >= STR_TO_DATE(?, '%m-%Y')
+                or a.usage_date >= STR_TO_DATE(?, '%m-%Y')
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
         ", [$filterMonth, $filterMonth, $filterMonth, $filterMonth]);
 
@@ -169,81 +68,8 @@ class StockCardController extends Controller
                 a.item_code,
                 (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))+sum(IFNULL(a.adjustment_qty,0))-sum(IFNULL(a.usage_qty,0))) as saldo_qty,
                 (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal
-            FROM (
-                SELECT
-                    i.item_code,
-                    pd.qty as procurement_qty,
-                    pd.total as procurement_total,
-                    null as sales_qty,
-                    null as sales_total,
-                    null as adjustment_qty,
-                    null as usage_qty,
-                    p.procurement_date as tx_date,
-                    p.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN procurement_details pd ON id.id = pd.item_detail_id and pd.status = 1
-                    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    null as procurement_qty,
-                    null as procurement_total,
-                    sd.qty as sales_qty,
-                    sd.total as sales_total,
-                    null as adjustment_qty,
-                    null as usage_qty,
-                    s.sales_date as tx_date,
-                    s.created_at created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN sales_details sd ON id.id = sd.item_detail_id and sd.status = 1
-                    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    null as procurement_qty,
-                    null as procurement_total,
-                    null as sales_qty,
-                    null as sales_total,
-                    sa.qty as adjustment_qty,
-                    null as usage_qty,
-                    sa.transaction_date as tx_date,
-                    sa.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_adjustment sa ON id.id = sa.item_detail_id and sa.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    null as procurement_qty,
-                    null as procurement_total,
-                    null as sales_qty,
-                    null as sales_total,
-                    null as adjustment_qty,
-                    su.qty as usage_qty,
-                    su.transaction_date as tx_date,
-                    su.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_usage su ON id.id = su.item_detail_id and su.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-            ) a
+            FROM 
+                stock_value_sum a
             WHERE
                 a.tx_date <= STR_TO_DATE(?, '%m-%Y')
             GROUP BY a.item_code
@@ -362,109 +188,8 @@ class StockCardController extends Controller
                 a.adjustment_qty,
                 a.usage_date,
                 a.usage_qty
-            FROM (
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    p.procurement_date,
-                    pd.qty as procurement_qty,
-                    pd.price as procurement_price,
-                    pd.total as procurement_total,
-                    null as sales_date,
-                    null as sales_qty,
-                    null as sales_price,
-                    null as sales_total,
-                    null as adjustment_qty,
-                    null as adjustment_date,
-                    null as usage_qty,
-                    null as usage_date,
-                    pd.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN procurement_details pd ON id.id = pd.item_detail_id and pd.status = 1
-                    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    null procurement_date,
-                    null as procurement_qty,
-                    null as procurement_price,
-                    null as procurement_total,
-                    s.sales_date,
-                    sd.qty as sales_qty,
-                    sd.price as sales_price,
-                    sd.total as sales_total,
-                    null as adjustment_qty,
-                    null as adjustment_date,
-                    null as usage_qty,
-                    null as usage_date,
-                    sd.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN sales_details sd ON id.id = sd.item_detail_id and sd.status = 1
-                    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    null procurement_date,
-                    null as procurement_qty,
-                    null as procurement_price,
-                    null as procurement_total,
-                    null as sales_date,
-                    null as sales_qty,
-                    null as sales_price,
-                    null as sales_total,
-                    sa.qty as adjustment_qty,
-                    sa.transaction_date as adjustment_date,
-                    null as usage_qty,
-                    null as usage_date,
-                    sa.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_adjustment sa ON id.id = sa.item_detail_id and sa.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    i.name as item_name,
-                    l.name as location_name,
-                    null procurement_date,
-                    null as procurement_qty,
-                    null as procurement_price,
-                    null as procurement_total,
-                    null as sales_date,
-                    null as sales_qty,
-                    null as sales_price,
-                    null as sales_total,
-                    null as adjustment_qty,
-                    null as adjustment_date,
-                    su.qty as usage_qty,
-                    su.transaction_date as usage_date,
-                    su.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_usage su ON id.id = su.item_detail_id and su.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-            ) a
+            FROM 
+                stock_value a
             WHERE
                 a.item_code = ?
                 AND (
@@ -481,81 +206,8 @@ class StockCardController extends Controller
                 a.item_code,
                 (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))+sum(IFNULL(a.adjustment_qty,0))-sum(IFNULL(a.usage_qty,0))) as saldo_qty,
                 (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal
-            FROM (
-                SELECT
-                    i.item_code,
-                    pd.qty as procurement_qty,
-                    pd.total as procurement_total,
-                    null as sales_qty,
-                    null as sales_total,
-                    p.procurement_date as tx_date,
-                    p.created_at as created_at,
-                    null as adjustment_qty,
-                    null as usage_qty
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN procurement_details pd ON id.id = pd.item_detail_id and pd.status = 1
-                    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    null as procurement_qty,
-                    null as procurement_total,
-                    sd.qty as sales_qty,
-                    sd.total as sales_total,
-                    s.sales_date as tx_date,
-                    s.created_at created_at,
-                    null as adjustment_qty,
-                    null as usage_qty
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN sales_details sd ON id.id = sd.item_detail_id and sd.status = 1
-                    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    null as procurement_qty,
-                    null as procurement_total,
-                    null as sales_qty,
-                    null as sales_total,
-                    sa.qty as adjustment_qty,
-                    null as usage_qty,
-                    sa.transaction_date as tx_date,
-                    sa.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_adjustment sa ON id.id = sa.item_detail_id and sa.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-                UNION ALL
-                SELECT
-                    i.item_code,
-                    null as procurement_qty,
-                    null as procurement_total,
-                    null as sales_qty,
-                    null as sales_total,
-                    null as adjustment_qty,
-                    su.qty as usage_qty,
-                    su.transaction_date as tx_date,
-                    su.created_at as created_at
-                FROM
-                    items i
-                    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
-                    RIGHT JOIN stock_usage su ON id.id = su.item_detail_id and su.status = 1
-                    JOIN locations l ON id.location_id = l.id and l.status = 1
-                WHERE
-                    i.status = 1
-            ) a
+            FROM 
+                stock_value_sum a
             WHERE
                 a.tx_date <= STR_TO_DATE(?, '%m-%Y')
                 AND a.item_code = ?

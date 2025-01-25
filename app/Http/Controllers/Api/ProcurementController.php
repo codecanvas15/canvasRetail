@@ -105,15 +105,6 @@ class ProcurementController extends Controller
 
             $tax = Tax::whereIn('id', $taxes)->sum('value');
 
-            // if ($request->include_tax)
-            // {
-            //     $totalAmount = $request->total_amount;
-            // }
-            // else
-            // {
-            //     $totalAmount = round($request->total_amount / (1 + $tax/100), 0, $rounding);
-            // }
-
             $totalAmount = 0;
             // insert procurement
             $procurement = Procurement::create([
@@ -198,6 +189,8 @@ class ProcurementController extends Controller
             }
             else if ($outstanding < 0)
             {
+                DB::rollBack();
+                
                 return response()->json([
                     "status" => false,
                     "message" => "Total Payment amount is greater than procurement amount."

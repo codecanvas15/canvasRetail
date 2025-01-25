@@ -97,6 +97,10 @@ class SalesController extends Controller
 
             $documentNumber = 'SO-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
 
+            $taxes = explode(',', $request->tax_ids);
+
+            $tax = Tax::whereIn('id', $taxes)->sum('value');
+
             // insert sales
             $sales = Sales::create([
                 'contact_id' => $request->contact_id,
@@ -110,7 +114,7 @@ class SalesController extends Controller
                 'bank_id'    => $request->bank_id ?? null
             ]);
 
-            $totalAmount = 0;
+            $totalAmount = 0.00;
 
             foreach ($request->items as $item)
             {
@@ -139,21 +143,23 @@ class SalesController extends Controller
                     ]);
                 }
 
+                $total = $item['qty'] * $item['price'];
+
                 // insert sales detail
                 SalesDetail::create([
                     'sales_id' => $sales->id,
                     'item_detail_id' => $itemDet['id'],
                     'qty' => $item['qty'],
                     'price' => $item['price'],
-                    'total' => $item['qty'] * $item['price'],
+                    'total' => $total,
                     'tax_ids' => $request->tax_ids,
                     'created_by' => auth()->user()->id,
                     'updated_by' => auth()->user()->id,
                     'status' => 1,
-                    'discount' => $item['discount'] ?? 0 ? ($item['discount']/100) * ($item['qty'] * $item['price']) : 0
+                    'discount' => $item['discount'] ?? 0 ? ($item['discount']/100) * $total : 0
                 ]);
 
-                $totalAmount += $item['qty'] * $item['price'];
+                $totalAmount += $total - ($item['discount']/100 * $total) + ($tax/100 * $total);
             }
 
             if ($request->rounding === 'down') 
@@ -178,6 +184,8 @@ class SalesController extends Controller
             }
             else if ($outstanding < 0)
             {
+                DB::rollBack();
+                
                 return response()->json([
                     "status" => false,
                     "message" => "Total Payment amount is greater than procurement amount."
