@@ -316,7 +316,7 @@ class SalesController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('sales_details.sales_id', $id)
-                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.id as location_id')
+                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 
             $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();
