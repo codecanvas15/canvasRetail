@@ -95,11 +95,12 @@ class ProcurementController extends Controller
                 FROM
                     procurements
                 WHERE
-                    DATE_FORMAT(created_at, '%d%m%y') <= STR_TO_DATE(?, '%d%m%y')
+                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
                     AND doc_number IS NOT NULL
             ", [$month]);
 
-            $documentNumber = 'PR-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
+            $docDate = $date->format('dmY');
+            $documentNumber = 'PO-'.$docDate.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
             
             $taxes = explode(',', $request->tax_ids);
 
@@ -115,7 +116,8 @@ class ProcurementController extends Controller
                 'created_by'        => auth()->user()->id,
                 'updated_by'        => auth()->user()->id,
                 'status'            => 1,
-                'doc_number'        => $documentNumber
+                'doc_number'        => $documentNumber,
+                'include_tax'       => $request->include_tax == 1 ? true : false,
             ]);
 
             foreach ($request->items as $item)

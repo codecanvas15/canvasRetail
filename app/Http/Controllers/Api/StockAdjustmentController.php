@@ -7,6 +7,7 @@ use App\Item;
 use App\ItemDetail;
 use App\Location;
 use App\StockAdjustment;
+use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -46,8 +47,23 @@ class StockAdjustmentController extends Controller
         $errorMsg = [];
 
         $date = strtotime($request->transaction_date);
-
         $transactionDate = date('Y-m-d H:i:s',$date);
+
+        $date = new DateTime('now');
+        $month = $date->format('my');
+
+        $seq = DB::select("
+            SELECT
+                count(doc_number) as seq
+            FROM
+                stock_adjustment
+            WHERE
+                DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
+                AND doc_number IS NOT NULL
+        ", [$month]);
+
+        $docDate = $date->format('dmY');
+        $documentNumber = 'ADJ-'.$docDate.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
 
         DB::beginTransaction();
         try
@@ -82,6 +98,7 @@ class StockAdjustmentController extends Controller
                             'created_by'            => auth()->user()->id,
                             'updated_by'            => auth()->user()->id,
                             'status'                => 1,
+                            'doc_number'            => $documentNumber
                         ]);
                     }
                     else

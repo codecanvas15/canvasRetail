@@ -20,6 +20,7 @@ class StockUsage extends Model
         'reason',
         'created_by',
         'updated_by',
-        'status'
+        'status',
+        'doc_number'
     ];
 }

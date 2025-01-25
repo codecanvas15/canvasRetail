@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('qty');
             $table->timestamp('transaction_date');
             $table->string('reason', 512);
+            $table->string('doc_number');
             $table->string('created_by');
             $table->timestamp('created_at')->nullable();
             $table->string('updated_by');

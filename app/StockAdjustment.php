@@ -19,7 +19,8 @@ class StockAdjustment extends Model
         'created_by',
         'updated_by',
         'status',
-        'reason'
+        'reason',
+        'doc_number'
     ];
 
 }

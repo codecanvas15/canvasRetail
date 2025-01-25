@@ -95,7 +95,8 @@ class SalesController extends Controller
                     AND doc_number IS NOT NULL
             ", [$month]);
 
-            $documentNumber = 'SO-'.$month.'-'.str_pad(($seq[0]->seq+1), 3, '0', STR_PAD_LEFT);
+            $docDate = $date->format('dmY');
+            $documentNumber = 'INV-'.$docDate.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
 
             $taxes = explode(',', $request->tax_ids);
 

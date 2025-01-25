@@ -7,6 +7,7 @@ use App\Item;
 use App\ItemDetail;
 use App\Location;
 use App\StockUsage;
+use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -47,8 +48,23 @@ class StockUsageController extends Controller
         $errorMsg = [];
 
         $date = strtotime($request->transaction_date);
-
         $transactionDate = date('Y-m-d H:i:s',$date);
+
+        $date = new DateTime('now');
+        $month = $date->format('my');
+        
+        $seq = DB::select("
+            SELECT
+                count(doc_number) as seq
+            FROM
+                stock_usage
+            WHERE
+                DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
+                AND doc_number IS NOT NULL
+        ", [$month]);
+
+        $docDate = $date->format('dmY');
+        $documentNumber = 'STK-'.$docDate.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
 
         DB::beginTransaction();
         try
@@ -84,6 +100,7 @@ class StockUsageController extends Controller
                             'created_by'            => auth()->user()->id,
                             'updated_by'            => auth()->user()->id,
                             'status'                => 1,
+                            'doc_number'            => $documentNumber
                         ]);
                     }
                     else
