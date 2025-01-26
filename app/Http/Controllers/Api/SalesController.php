@@ -285,6 +285,10 @@ class SalesController extends Controller
         }
 
         $query  = Sales::query();
+
+        $query->join('contacts', 'sales.contact_id', '=', 'contacts.id')
+              ->select('sales.*', 'contacts.name as contact_name');
+
         $sales = $query->orderBy($sortBy, $sortOrder)->paginate(10);
         $sales->appends([
             'sort_by' => $sortBy,

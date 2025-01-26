@@ -290,6 +290,10 @@ class ProcurementController extends Controller
         }
 
         $query  = Procurement::query();
+
+        $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
+              ->select('procurements.*', 'contacts.name as contact_name');
+
         $procurement = $query->orderBy($sortBy, $sortOrder)->paginate(10);
         $procurement->appends([
             'sort_by' => $sortBy,
