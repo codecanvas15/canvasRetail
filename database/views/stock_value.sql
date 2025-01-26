@@ -63,15 +63,16 @@ SELECT
     null as sales_qty,
     null as sales_price,
     null as sales_total,
-    sa.transaction_date as adjustment_date,
+    sah.transaction_date as adjustment_date,
     sa.qty as adjustment_qty,
     null as usage_date,
     null as usage_qty,
-    sa.created_at as created_at
+    sah.created_at as created_at
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
     RIGHT JOIN stock_adjustment sa ON id.id = sa.item_detail_id and sa.status = 1
+    LEFT OUTER JOIN stock_adjustment_header sah ON sa.stock_adjustment_id = sah.id and sah.status = 1
     JOIN locations l ON id.location_id = l.id and l.status = 1
 WHERE
     i.status = 1
@@ -90,13 +91,14 @@ SELECT
     null as sales_total,
     null as adjustment_date,
     null as adjustment_qty,
-    su.transaction_date as usage_date,
+    suh.transaction_date as usage_date,
     su.qty as usage_qty,
-    su.created_at as created_at
+    suh.created_at as created_at
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
     RIGHT JOIN stock_usage su ON id.id = su.item_detail_id and su.status = 1
+    LEFT OUTER JOIN stock_usage_header suh ON su.stock_usage_id = suh.id and suh.status = 1
     JOIN locations l ON id.location_id = l.id and l.status = 1
 WHERE
     i.status = 1;
