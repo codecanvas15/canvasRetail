@@ -110,11 +110,13 @@ Route::group([
     // stock adjustment
     Route::post("stockadjustment", [StockAdjustmentController::class, "adjustment"]);
     Route::get("stockadjustment", [StockAdjustmentController::class, "getAdjustment"]);
+    Route::get("stockadjustment/{id}", [StockAdjustmentController::class, "getAdjustmentDetail"]);
     Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"]);
     
     // stock usage
     Route::post("stockusage", [StockUsageController::class, "usage"]);
     Route::get("stockusage", [StockUsageController::class, "getUsage"]);
+    Route::get("stockusage/{id}", [StockUsageController::class, "getUsageDetail"]);
     Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"]);
 
     // reports

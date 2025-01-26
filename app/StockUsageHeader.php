@@ -5,20 +5,19 @@ namespace App;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class StockAdjustment extends Model
+class StockUsageHeader extends Model
 {
     use HasFactory;
 
-    protected $table = 'stock_adjustment';
+    protected $table = 'stock_usage_header';
 
     protected $fillable = [
-        'stock_adjustment_id',
-        'item_detail_id',
-        'qty',
+        'transaction_date',
+        'reason',
+        'doc_number',
+        'user_item_name',
         'created_by',
         'updated_by',
         'status'
     ];
-
 }
-

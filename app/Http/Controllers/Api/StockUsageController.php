@@ -7,6 +7,7 @@ use App\Item;
 use App\ItemDetail;
 use App\Location;
 use App\StockUsage;
+use App\StockUsageHeader;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +58,7 @@ class StockUsageController extends Controller
             SELECT
                 count(doc_number) as seq
             FROM
-                stock_usage
+                stock_usage_header
             WHERE
                 DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
                 AND doc_number IS NOT NULL
@@ -69,6 +70,16 @@ class StockUsageController extends Controller
         DB::beginTransaction();
         try
         {
+            $header = StockUsageHeader::create([
+                'transaction_date'  => $transactionDate,
+                'reason'            => $request->reason,
+                'doc_number'        => $documentNumber,
+                'user_item_name'    => $request->user_item_name,
+                'created_by'        => auth()->user()->id,
+                'updated_by'        => auth()->user()->id,
+                'status'            => 1
+            ]);
+
             foreach ($request->items as $item)
             {
                 if (!Item::where('item_code', $item['code'])->where('status', 1)->exists())
@@ -92,15 +103,12 @@ class StockUsageController extends Controller
                         ]);
 
                         StockUsage::create([
+                            'stock_usage_id'        => $header->id,
                             'item_detail_id'        => $itemDet->id,
-                            'user_item_name'        => $request->user_item_name,
                             'qty'                   => $item['qty'],
-                            'transaction_date'      => $transactionDate,
-                            'reason'                => $request->reason,
                             'created_by'            => auth()->user()->id,
                             'updated_by'            => auth()->user()->id,
-                            'status'                => 1,
-                            'doc_number'            => $documentNumber
+                            'status'                => 1
                         ]);
                     }
                     else
@@ -132,7 +140,7 @@ class StockUsageController extends Controller
         }
         catch (\Throwable $e)
         {
-            DB::rollBack();
+            DB::rollBack();  
 
             return response()->json([
                 "status" => false,
@@ -150,7 +158,7 @@ class StockUsageController extends Controller
             $sortOrder = 'desc'; // Default to ascending if invalid
         }
 
-        $query  = StockUsage::query();
+        $query  = StockUsageHeader::query();
         $stockUsage = $query->orderBy($sortBy, $sortOrder)->paginate(10);
         $stockUsage->appends([
             'sort_by' => $sortBy,
@@ -167,6 +175,37 @@ class StockUsageController extends Controller
                 'prev_page' => $stockUsage->previousPageUrl(),
             ],
         ]);
+    }
+
+    public function getUsageDetail($id)
+    {
+        if(StockUsageHeader::where('id', $id)->where('status',1)->exists())
+        {
+            $usg = StockUsageHeader::where('id', $id)->where('status', 1)->first();
+
+            $usgDet = DB::table('stock_usage')
+                            ->join('items_details', 'stock_usage.item_detail_id', '=', 'items_details.id')
+                            ->join('items', 'items_details.item_code', '=', 'items.item_code')
+                            ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                            ->where('stock_usage.stock_usage_id', $id)
+                            ->select('items.item_code', 'stock_usage.qty', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->get();
+
+            $data = $usg;
+            $data['details'] = $usgDet;
+
+            return response()->json([
+                "status"    => true,
+                "data"      => $data
+            ]);
+        }
+        else
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Sales not found"
+            ], 404);
+        }
     }
 
     public function rejectUsage($id)

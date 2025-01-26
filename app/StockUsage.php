@@ -12,15 +12,11 @@ class StockUsage extends Model
     protected $table = 'stock_usage';
 
     protected $fillable = [
+        'stock_usage_id',
         'item_detail_id',
-        'location_id',
-        'user_item_name',
         'qty',
-        'transaction_date',
-        'reason',
         'created_by',
         'updated_by',
-        'status',
-        'doc_number'
+        'status'
     ];
 }

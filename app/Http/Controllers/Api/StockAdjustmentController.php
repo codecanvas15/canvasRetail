@@ -7,6 +7,7 @@ use App\Item;
 use App\ItemDetail;
 use App\Location;
 use App\StockAdjustment;
+use App\StockAdjustmentHeader;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,7 @@ class StockAdjustmentController extends Controller
             SELECT
                 count(doc_number) as seq
             FROM
-                stock_adjustment
+                stock_adjustment_header
             WHERE
                 DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
                 AND doc_number IS NOT NULL
@@ -68,6 +69,15 @@ class StockAdjustmentController extends Controller
         DB::beginTransaction();
         try
         {
+            $header = StockAdjustmentHeader::create([
+                'transaction_date'  => $transactionDate,
+                'reason'            => $request->reason,
+                'doc_number'        => $documentNumber,
+                'created_by'        => auth()->user()->id,
+                'updated_by'        => auth()->user()->id,
+                'status'            => 1
+            ]);
+
             foreach ($request->items as $item)
             {
                 if (!Item::where('item_code', $item['code'])->where('status', 1)->exists())
@@ -91,14 +101,12 @@ class StockAdjustmentController extends Controller
                         ]);
 
                         StockAdjustment::create([
+                            'stock_adjustment_id'   => $header->id,
                             'item_detail_id'        => $itemDet->id,
                             'qty'                   => $item['qty'],
-                            'transaction_date'      => $transactionDate,
-                            'reason'                => $request->reason,
                             'created_by'            => auth()->user()->id,
                             'updated_by'            => auth()->user()->id,
-                            'status'                => 1,
-                            'doc_number'            => $documentNumber
+                            'status'                => 1
                         ]);
                     }
                     else
@@ -148,7 +156,7 @@ class StockAdjustmentController extends Controller
             $sortOrder = 'desc'; // Default to ascending if invalid
         }
 
-        $query  = StockAdjustment::query();
+        $query  = StockAdjustmentHeader::query();
         $stockAdjustment = $query->orderBy($sortBy, $sortOrder)->paginate(10);
         $stockAdjustment->appends([
             'sort_by' => $sortBy,
@@ -165,6 +173,37 @@ class StockAdjustmentController extends Controller
                 'prev_page' => $stockAdjustment->previousPageUrl(),
             ],
         ]);
+    }
+
+    public function getAdjustmentDetail($id)
+    {
+        if(StockAdjustmentHeader::where('id', $id)->where('status',1)->exists())
+        {
+            $adj = StockAdjustmentHeader::where('id', $id)->where('status', 1)->first();
+
+            $adjDet = DB::table('stock_adjustment')
+                            ->join('items_details', 'stock_adjustment.item_detail_id', '=', 'items_details.id')
+                            ->join('items', 'items_details.item_code', '=', 'items.item_code')
+                            ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                            ->where('stock_adjustment.stock_adjustment_id', $id)
+                            ->select('items.item_code', 'stock_adjustment.qty', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->get();
+
+            $data = $adj;
+            $data['details'] = $adjDet;
+
+            return response()->json([
+                "status"    => true,
+                "data"      => $data
+            ]);
+        }
+        else
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Sales not found"
+            ], 404);
+        }
     }
 
     public function rejectAdjustment($id)
