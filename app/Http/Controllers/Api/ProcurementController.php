@@ -151,21 +151,23 @@ class ProcurementController extends Controller
                     ]);
                 }
 
+                $total = $item['qty'] * $itemPrice;
+
                 // insert to procurement detail
                 ProcurementDetail::create([
                     'procurement_id'    => $procurement->id,
                     'item_detail_id'    => $itemDet['id'],
                     'qty'               => $item['qty'],
                     'price'             => $itemPrice,
-                    'total'             => round(($item['qty'] * $itemPrice), 2),
+                    'total'             => round($total, 2),
                     'tax_ids'           => $request->tax_ids,
                     'created_by'        => auth()->user()->id,
                     'updated_by'        => auth()->user()->id,
                     'status'            => 1,
-                    'discount'          => $item['discount'] ?? 0 ? ($item['discount']/100) * ($item['qty'] * $itemPrice) : 0
+                    'discount'          => $item['discount'] ?? 0 ? ($item['discount']/100) * $total : 0
                 ]);
 
-                $totalAmount += (($item['qty'] * $itemPrice) + ($item['qty'] * $itemPrice) * ($tax/100));
+                $totalAmount += ($total + $total * ($tax/100));
             }
 
             if ($request->rounding === 'down') 

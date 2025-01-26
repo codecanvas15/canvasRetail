@@ -157,7 +157,7 @@ class SalesController extends Controller
                     'created_by' => auth()->user()->id,
                     'updated_by' => auth()->user()->id,
                     'status' => 1,
-                    'discount' => $item['discount'] ?? 0 ? round(($item['discount']/100) * $total): 0
+                    'discount' => $item['discount'] ?? 0 ? ($item['discount']/100) * $total: 0
                 ]);
 
                 $totalAmount += $total - ($item['discount']/100 * $total) + ($tax/100 * $total);
