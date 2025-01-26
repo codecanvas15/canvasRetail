@@ -257,7 +257,7 @@ class StockCardController extends Controller
 
                 // if ($value == 0)
                 // {
-                    $saldoNominal += ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total);
+                    $saldoNominal += ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
                 // }
                 // else
                 // {
