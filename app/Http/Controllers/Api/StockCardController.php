@@ -255,14 +255,14 @@ class StockCardController extends Controller
             {
                 $saldoQty = $saldoQty + ($item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ($item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ($item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ($item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
 
-                if ($value == 0)
-                {
-                    $saldoNominal = ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
-                }
-                else
-                {
-                    $saldoNominal += $item[$j]->procurement_total * $saldoQty;
-                }
+                // if ($value == 0)
+                // {
+                    $saldoNominal += ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
+                // }
+                // else
+                // {
+                //     $saldoNominal += $item[$j]->procurement_total;
+                // }
 
 
                 if ($saldoQty == 0)
