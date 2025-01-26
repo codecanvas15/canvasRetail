@@ -287,7 +287,7 @@ class StockCardController extends Controller
                     'usage_qty' => $item[$j]->usage_qty,
                     'saldo_qty' => $saldoQty,
                     'saldo_nominal' => sprintf("%01.2f", $saldoNominal),
-                    'value' => $value
+                    'value' => sprintf("%01.2f", $value)
                 ];
             }
         }
