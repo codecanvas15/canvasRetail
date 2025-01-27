@@ -111,10 +111,16 @@ class StockAdjustmentController extends Controller
                     }
                     else
                     {
-                        $location = Location::where('id', $item['location_id'])->where('status', 1)->first();
 
-                        $error++;
-                        array_push($errorMsg, 'Item ' . $item['code'] . ' at ' . $location->name . ' not found !');
+                        $itemDet = ItemDetail::create([
+                            'item_code'     => $item['item_code'],
+                            'location_id'   => $item['location_id'],
+                            'qty'           => $item['qty'],
+                            'price'         => null,
+                            'created_by'    => auth()->user()->id,
+                            'updated_by'    => auth()->user()->id,
+                            'status'        => 1
+                        ]);
                     }
                 }
             }
