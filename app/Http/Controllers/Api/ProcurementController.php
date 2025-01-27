@@ -125,7 +125,23 @@ class ProcurementController extends Controller
 
                 if ($request->include_tax)
                 {
-                    $itemPrice = round($item['price'] / (1 + $tax/100), 2);
+                    $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+                    
+                    $priceAfterDiscount = $item['price'] - $discount;
+
+                    $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+                    
+                    $total = $item['qty'] * $itemPrice;
+                }
+                else
+                {
+                    $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+
+                    $priceAfterDiscount = $item['price'] - $discount;
+
+                    $itemPrice = $priceAfterDiscount;
+
+                    $total = $item['qty'] * $itemPrice;
                 }
 
                 // insert to item detail
@@ -151,7 +167,14 @@ class ProcurementController extends Controller
                     ]);
                 }
 
-                $total = $item['qty'] * $itemPrice;
+                if ($request->include_tax)
+                {
+                    $total = $item['qty'] * $itemPrice;
+                }
+                else
+                {
+                    $total = $item['qty'] * ($item['price']);
+                }
 
                 // insert to procurement detail
                 ProcurementDetail::create([
@@ -164,7 +187,7 @@ class ProcurementController extends Controller
                     'created_by'        => auth()->user()->id,
                     'updated_by'        => auth()->user()->id,
                     'status'            => 1,
-                    'discount'          => $item['discount'] ?? 0 ? ($item['discount']/100) * $total : 0
+                    'discount'          => $discount
                 ]);
 
                 $totalAmount += ($total + $total * ($tax/100));

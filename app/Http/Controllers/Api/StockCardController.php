@@ -67,7 +67,7 @@ class StockCardController extends Controller
             SELECT
                 a.item_code,
                 (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))+sum(IFNULL(a.adjustment_qty,0))-sum(IFNULL(a.usage_qty,0))) as saldo_qty,
-                (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal
+                sum(IFNULL(a.procurement_total, 0)) as saldo_nominal
             FROM 
                 stock_value_sum a
             WHERE
@@ -90,7 +90,6 @@ class StockCardController extends Controller
 
             $saldoQty       = 0;
             $saldoNominal   = 0;
-            $value = 0;
 
             if(sizeof($itemStockAwal) > 0)
             {
@@ -106,23 +105,11 @@ class StockCardController extends Controller
             {
                 $saldoQty = $saldoQty + ($itemStock[$j]->procurement_qty == null ? 0 : $itemStock[$j]->procurement_qty) - ($itemStock[$j]->sales_qty == null ? 0 : $itemStock[$j]->sales_qty) + ($itemStock[$j]->adjustment_qty == null ? 0 : $itemStock[$j]->adjustment_qty) - ($itemStock[$j]->usage_qty == null ? 0 : $itemStock[$j]->usage_qty);
 
-                if ($value == 0)
+                if ($itemStock[$j]->procurement_total != null)
                 {
-                    $saldoNominal = ($itemStock[$j]->procurement_total == null ? 0 : $itemStock[$j]->procurement_total) - ($itemStock[$j]->sales_total == null ? 0 : $itemStock[$j]->sales_total);
-                }
-                else
-                {
-                    $saldoNominal += $itemStock[$j]->procurement_total * $saldoQty;
+                    $saldoNominal += $itemStock[$j]->procurement_total;
                 }
 
-                if ($saldoQty == 0)
-                {
-                    $value = 0;
-                }
-                else
-                {
-                    $value = $saldoNominal / $saldoQty;
-                }
             }
 
             $stockList[] = [
@@ -205,7 +192,7 @@ class StockCardController extends Controller
             SELECT
                 a.item_code,
                 (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))+sum(IFNULL(a.adjustment_qty,0))-sum(IFNULL(a.usage_qty,0))) as saldo_qty,
-                (sum(IFNULL(a.procurement_total, 0))-sum(IFNULL(a.sales_total,0))) as saldo_nominal
+                sum(IFNULL(a.procurement_total, 0)) as saldo_nominal
             FROM 
                 stock_value_sum a
             WHERE
@@ -249,30 +236,30 @@ class StockCardController extends Controller
             $saldoQty = $result[$i]['saldo_qty'];
             $saldoNominal = $result[$i]['saldo_nominal'];
             $value = 0;
+            $procurement_qty = 0;
             $result[$i]['items'] = [];
 
             for($j = 0; $j < sizeof($item); $j++)
             {
                 $saldoQty = $saldoQty + ($item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ($item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ($item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ($item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
 
-                // if ($value == 0)
-                // {
-                    $saldoNominal += ($item[$j]->procurement_total == null ? 0 : $item[$j]->procurement_total) - ($item[$j]->sales_total == null ? 0 : $item[$j]->sales_total);
-                // }
-                // else
-                // {
-                //     $saldoNominal += $item[$j]->procurement_total;
-                // }
+                if ($item[$j]->procurement_total != null)
+                {
+                    $saldoNominal += $item[$j]->procurement_total;
+
+                    $procurement_qty += $item[$j]->procurement_qty;
+
+                    if ($procurement_qty == 0)
+                    {
+                        $value = 0;
+                    }
+                    else
+                    {
+                        $value = $saldoNominal / $procurement_qty;
+                    }
+                }
 
 
-                if ($saldoQty == 0)
-                {
-                    $value = 0;
-                }
-                else
-                {
-                    $value = $saldoNominal / $saldoQty;
-                }
 
                 $result[$i]['items'][] = [
                     'procurement_date' => $item[$j]->procurement_date,

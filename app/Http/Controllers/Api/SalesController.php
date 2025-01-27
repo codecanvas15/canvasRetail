@@ -121,6 +121,27 @@ class SalesController extends Controller
             {
                 $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
 
+                if ($request->include_tax)
+                {
+                    $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+                    
+                    $priceAfterDiscount = $item['price'] - $discount;
+
+                    $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+                    
+                    $total = $item['qty'] * $itemPrice;
+                }
+                else
+                {
+                    $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+
+                    $priceAfterDiscount = $item['price'] - $discount;
+
+                    $itemPrice = $priceAfterDiscount;
+
+                    $total = $item['qty'] * $itemPrice;
+                }
+
                 // insert and update item details
                 if ($itemDet == null)
                 {
@@ -151,16 +172,16 @@ class SalesController extends Controller
                     'sales_id' => $sales->id,
                     'item_detail_id' => $itemDet['id'],
                     'qty' => $item['qty'],
-                    'price' => $item['price'],
+                    'price' => $itemPrice,
                     'total' => $total,
                     'tax_ids' => $request->tax_ids,
                     'created_by' => auth()->user()->id,
                     'updated_by' => auth()->user()->id,
                     'status' => 1,
-                    'discount' => $item['discount'] ?? 0 ? ($item['discount']/100) * $total: 0
+                    'discount' => $discount
                 ]);
 
-                $totalAmount += $total - ($item['discount']/100 * $total) + ($tax/100 * $total);
+                $totalAmount += ($total + $total * ($tax/100));
             }
 
             if ($request->rounding === 'down') 

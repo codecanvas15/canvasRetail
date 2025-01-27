@@ -134,7 +134,7 @@ class LocationController extends Controller
             $location = Location::where('id', $id)->where('status', 1)->first();
 
             $items = DB::table('items')
-                    ->join('items_details', 'items.item_code', '=', 'items_details.item_code')
+                    ->leftJoin('items_details', 'items.item_code', '=', 'items_details.item_code')
                     ->where('items_details.location_id', $id)
                     ->where('items_details.status', 1)
                     ->where('items.status', 1)
