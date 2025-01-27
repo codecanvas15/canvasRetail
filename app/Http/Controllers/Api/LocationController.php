@@ -132,14 +132,21 @@ class LocationController extends Controller
         if (Location::where('id', $id)->where('status', 1)->exists())
         {
             $location = Location::where('id', $id)->where('status', 1)->first();
-
-            $items = DB::table('items')
-                    ->leftJoin('items_details', 'items.item_code', '=', 'items_details.item_code')
-                    ->where('items_details.location_id', $id)
-                    ->where('items_details.status', 1)
-                    ->where('items.status', 1)
-                    ->select('items.item_code', 'items.name', 'items.image', 'items.category', 'items_details.qty', 'items_details.price')
-                    ->get();
+            
+            $items = DB::select('
+                SELECT 
+                    items.item_code, 
+                    items.name, 
+                    items.image, 
+                    items.category, 
+                    IFNULL(items_details.qty, 0) AS qty,
+                    IFNULL(items_details.price, 0) AS price
+                FROM 
+                    items 
+                    LEFT OUTER JOIN items_details ON items.item_code = items_details.item_code AND items_details.location_id = ?  AND items_details.status = 1 
+                WHERE 
+                    items.status = 1'
+            , [$id]);
 
             $data = $location;
             $data['items'] = $items;
