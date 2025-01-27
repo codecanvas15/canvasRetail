@@ -94,7 +94,7 @@ class SalesController extends Controller
                     DATE_FORMAT(created_at, '%d%m%y') <= STR_TO_DATE(?, '%d%m%y')
                     AND doc_number IS NOT NULL
             ", [$date]);
-            
+
             $documentNumber = 'INV-'.$date.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
 
             $taxes = explode(',', $request->tax_ids);
@@ -127,7 +127,6 @@ class SalesController extends Controller
                     $priceAfterDiscount = $item['price'] - $discount;
 
                     $itemPrice = $priceAfterDiscount / (1 + $tax/100);
-                    
                     $total = $item['qty'] * $itemPrice;
                 }
                 else
@@ -164,7 +163,14 @@ class SalesController extends Controller
                     ]);
                 }
 
-                $total = $item['qty'] * $item['price'];
+                if ($request->include_tax)
+                {
+                    $total = $item['qty'] * $itemPrice;
+                }
+                else
+                {
+                    $total = $item['qty'] * $item['price'];
+                }
 
                 // insert sales detail
                 SalesDetail::create([
