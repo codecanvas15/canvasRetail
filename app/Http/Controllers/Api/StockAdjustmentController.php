@@ -157,7 +157,7 @@ class StockAdjustmentController extends Controller
         }
 
         $query  = StockAdjustmentHeader::query();
-        $stockAdjustment = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+        $stockAdjustment = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $stockAdjustment->appends([
             'sort_by' => $sortBy,
             'sort_order' => $sortOrder,

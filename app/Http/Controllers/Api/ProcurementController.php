@@ -84,7 +84,7 @@ class ProcurementController extends Controller
 
             // document number
             $date = new DateTime('now');
-            $month = $date->format('dmy');
+            $date = $date->format('dmy');
             Config::set('database.connections.'. config('database.default') .'.strict', false);
             DB::reconnect();
 
@@ -94,12 +94,11 @@ class ProcurementController extends Controller
                 FROM
                     procurements
                 WHERE
-                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
+                    DATE_FORMAT(created_at, '%d%m%y') <= STR_TO_DATE(?, '%d%m%y')
                     AND doc_number IS NOT NULL
-            ", [$month]);
+            ", [$date]);
 
-            $docDate = $date->format('dmY');
-            $documentNumber = 'PO-'.$docDate.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
+            $documentNumber = 'PO-'.$date.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
             
             $taxes = explode(',', $request->tax_ids);
 
@@ -319,7 +318,7 @@ class ProcurementController extends Controller
         $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
               ->select('procurements.*', 'contacts.name as contact_name');
 
-        $procurement = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+        $procurement = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $procurement->appends([
             'sort_by' => $sortBy,
             'sort_order' => $sortOrder,

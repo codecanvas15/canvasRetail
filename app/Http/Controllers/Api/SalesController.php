@@ -80,7 +80,7 @@ class SalesController extends Controller
 
             // document number
             $date = new DateTime('now');
-            $month = $date->format('my');
+            $date = $date->format('dmy');
 
             Config::set('database.connections.'. config('database.default') .'.strict', false);
             DB::reconnect();
@@ -91,12 +91,11 @@ class SalesController extends Controller
                 FROM
                     sales
                 WHERE
-                    DATE_FORMAT(created_at, '%m%y') <= STR_TO_DATE(?, '%m%y')
+                    DATE_FORMAT(created_at, '%d%m%y') <= STR_TO_DATE(?, '%d%m%y')
                     AND doc_number IS NOT NULL
-            ", [$month]);
-
-            $docDate = $date->format('dmY');
-            $documentNumber = 'INV-'.$docDate.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
+            ", [$date]);
+            
+            $documentNumber = 'INV-'.$date.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
 
             $taxes = explode(',', $request->tax_ids);
 
@@ -310,7 +309,7 @@ class SalesController extends Controller
         $query->join('contacts', 'sales.contact_id', '=', 'contacts.id')
               ->select('sales.*', 'contacts.name as contact_name');
 
-        $sales = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+        $sales = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $sales->appends([
             'sort_by' => $sortBy,
             'sort_order' => $sortOrder,

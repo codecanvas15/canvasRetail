@@ -159,7 +159,7 @@ class StockUsageController extends Controller
         }
 
         $query  = StockUsageHeader::query();
-        $stockUsage = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+        $stockUsage = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $stockUsage->appends([
             'sort_by' => $sortBy,
             'sort_order' => $sortOrder,
