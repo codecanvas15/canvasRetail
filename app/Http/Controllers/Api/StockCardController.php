@@ -259,7 +259,10 @@ class StockCardController extends Controller
                     }
                 }
 
-
+                if ($item[$j]->sales_total != null)
+                {
+                    $item[$j]->sales_total = $value;
+                }
 
                 $result[$i]['items'][] = [
                     'procurement_date' => $item[$j]->procurement_date,
