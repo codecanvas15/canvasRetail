@@ -264,6 +264,19 @@ class StockCardController extends Controller
                     $item[$j]->sales_total = $value;
                 }
 
+                $adjustment_total = null;
+                $usage_total = null;
+
+                if ($item[$j]->adjustment_qty != null)
+                {
+                    $adjustment_total = $value;
+                }
+
+                if ($item[$j]->adjustment_qty != null)
+                {
+                    $usage_total = $value;
+                }
+
                 $result[$i]['items'][] = [
                     'procurement_date' => $item[$j]->procurement_date,
                     'procurement_qty' => $item[$j]->procurement_qty,
@@ -273,8 +286,10 @@ class StockCardController extends Controller
                     'sales_total' => $item[$j]->sales_total,
                     'adjustment_date' => $item[$j]->adjustment_date,
                     'adjustment_qty' => $item[$j]->adjustment_qty,
+                    'adjustment_total' => $adjustment_total,
                     'usage_date' => $item[$j]->usage_date,
                     'usage_qty' => $item[$j]->usage_qty,
+                    'usage_total' => $usage_total,
                     'saldo_qty' => $saldoQty,
                     'saldo_nominal' => sprintf("%01.2f", $saldoNominal),
                     'value' => sprintf("%01.2f", $value)
