@@ -80,7 +80,7 @@ class SalesController extends Controller
 
             // document number
             $date = new DateTime('now');
-            $date = $date->format('dmy');
+            $date = $date->format('dmY');
 
             Config::set('database.connections.'. config('database.default') .'.strict', false);
             DB::reconnect();
@@ -91,7 +91,7 @@ class SalesController extends Controller
                 FROM
                     sales
                 WHERE
-                    DATE_FORMAT(created_at, '%d%m%y') <= STR_TO_DATE(?, '%d%m%y')
+                    DATE_FORMAT(created_at, '%d%m%Y') <= STR_TO_DATE(?, '%d%m%Y')
                     AND doc_number IS NOT NULL
             ", [$date]);
 
