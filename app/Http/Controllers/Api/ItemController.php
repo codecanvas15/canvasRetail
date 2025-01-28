@@ -23,7 +23,7 @@ class ItemController extends Controller
             return response()->json([
                 "status" => false,
                 "message" => $validator->errors()
-            ]);
+            ], 400);
         }
 
         $imagePath = '';
