@@ -66,13 +66,13 @@ class StockCardController extends Controller
         $stockAwal = DB::select("
             SELECT
                 a.item_code,
-                (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))+sum(IFNULL(a.adjustment_qty,0))-sum(IFNULL(a.usage_qty,0))) as saldo_qty,
+                ((IFNULL(a.procurement_qty, 0))-(IFNULL(a.sales_qty,0))+(IFNULL(a.adjustment_qty,0))-(IFNULL(a.usage_qty,0))) as saldo_qty,
                 sum(IFNULL(a.procurement_total, 0)) as saldo_nominal
             FROM 
                 stock_value_sum a
             WHERE
                 a.tx_date <= STR_TO_DATE(?, '%m-%Y')
-            GROUP BY a.item_code
+            GROUP BY a.item_code, a.procurement_qty, a.sales_qty, a.adjustment_qty, a.usage_qty, a.created_at
             ORDER BY a.item_code, a.created_at
         ", [$filterMonth]);
 
@@ -88,13 +88,27 @@ class StockCardController extends Controller
                 return $k->item_code == $item_code;
             }));
 
+            $value = 0;
             $saldoQty       = 0;
             $saldoNominal   = 0;
+            $procurement_qty = 0;
+
+            foreach ($itemStockAwal as $key => $itemDet) 
+            {
+                if ($itemDet->saldo_nominal > 0)
+                {
+                    $value = $itemDet->saldo_nominal / $itemDet->saldo_qty;
+                }
+
+                $saldoQty += $itemDet->saldo_qty;
+            }
+            
+            $stockNominal = $saldoQty * $value;
 
             if(sizeof($itemStockAwal) > 0)
             {
-                $saldoQty        = $itemStockAwal[0]->saldo_qty;
-                $saldoNominal    = $itemStockAwal[0]->saldo_nominal;
+                $saldoQty        = $saldoQty;
+                $saldoNominal    = $stockNominal;
             }
 
             $itemStock = array_values(array_filter($stock, function($k) use ($item_code) {
@@ -107,7 +121,62 @@ class StockCardController extends Controller
 
                 if ($itemStock[$j]->procurement_total != null)
                 {
-                    $saldoNominal += $itemStock[$j]->procurement_total;
+                    // $saldoNominal += $itemStock[$j]->procurement_total;
+                    $procurement_qty += $itemStock[$j]->procurement_qty;
+    
+                    if ($procurement_qty == 0)
+                    {
+                        $value = 0;
+                    }
+                    else
+                    {
+                        $value = ($saldoNominal == null ? $itemStock[$j]->procurement_total : $saldoNominal) / $procurement_qty;
+                    }
+                }
+
+                if ($itemStock[$j]->sales_total != null)
+                {
+                    $itemStock[$j]->sales_total = $value;
+                }
+
+                if($itemStock[$j]->procurement_date != null)
+                {
+                    $saldoMasuk = $itemStock[$j]->procurement_qty;
+                }
+                else if ($itemStock[$j]->adjustment_date != null && $itemStock[$j]->adjustment_qty > 0)
+                {
+                    $saldoMasuk = $itemStock[$j]->adjustment_qty;
+                }
+                else
+                {
+                    $saldoMasuk = null;
+                }
+
+                if ($saldoMasuk > 0)
+                {
+                    $saldoNominal += $value * $saldoMasuk;
+                }
+
+                if($itemStock[$j]->sales_qty != null)
+                {
+                    $saldoKeluar = $itemStock[$j]->sales_qty;
+                }
+                else if ($itemStock[$j]->adjustment_date != null && $itemStock[$j]->adjustment_qty < 0)
+                {
+                    $saldoKeluar = $itemStock[$j]->adjustment_qty;
+                }
+                else if ($itemStock[$j]->usage_date != null)
+                {
+                    $saldoKeluar = $itemStock[$j]->usage_qty;
+                }
+                else
+                {
+                    $saldoKeluar = null;
+                }
+
+                if ($saldoKeluar > 0)
+                {
+                    $saldoNominal -= $value * $saldoKeluar;
                 }
 
             }
