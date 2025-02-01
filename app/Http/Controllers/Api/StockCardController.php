@@ -323,7 +323,7 @@ class StockCardController extends Controller
             $saldoNominal = ($value < 0 ? $value * -1 : $value) * $saldoQty;
 
             $result[$i]['saldo_qty']        = $saldoQty;
-            $result[$i]['saldo_nominal']    = $saldoNominal;
+            $result[$i]['saldo_nominal']    = sprintf("%01.2f", $saldoNominal);
 
             $item = array_values(array_filter($stock, function($k) use ($item_code) {
                 return $k->item_code == $item_code;
