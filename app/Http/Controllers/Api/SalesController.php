@@ -324,14 +324,14 @@ class SalesController extends Controller
 
         $query  = Sales::query();
 
-        $query->join('contacts', 'saless.contact_id', '=', 'contacts.id')
-              ->select('saless.*', 'contacts.name as contact_name');
+        $query->join('contacts', 'sales.contact_id', '=', 'contacts.id')
+              ->select('sales.*', 'contacts.name as contact_name');
 
         if ($search != null)
         {
             $query->where('contacts.name', 'like', '%' . $search . '%');
-            $query->orWhere('saless.sales_date', 'like', '%' . $search . '%');
-            $query->orWhere('saless.doc_number', 'like', '%' . $search . '%');
+            $query->orWhere('sales.sales_date', 'like', '%' . $search . '%');
+            $query->orWhere('sales.doc_number', 'like', '%' . $search . '%');
         }
         else
         {
@@ -342,12 +342,12 @@ class SalesController extends Controller
 
             if ($searchsalesDate != null)
             {
-                $query->where('saless.sales_date', 'like', '%' . $searchsalesDate . '%');
+                $query->where('sales.sales_date', 'like', '%' . $searchsalesDate . '%');
             }
 
             if ($searchDocNumber != null)
             {
-                $query->where('saless.doc_number', 'like', '%' . $searchDocNumber . '%');
+                $query->where('sales.doc_number', 'like', '%' . $searchDocNumber . '%');
             }
         }
 
