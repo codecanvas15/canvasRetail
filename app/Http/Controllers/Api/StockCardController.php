@@ -247,7 +247,7 @@ class StockCardController extends Controller
 
                 if ($item[$j]->procurement_total != null)
                 {
-                    $saldoNominal += $item[$j]->procurement_total;
+                    // $saldoNominal += $item[$j]->procurement_total;
 
                     $procurement_qty += $item[$j]->procurement_qty;
 
@@ -257,7 +257,7 @@ class StockCardController extends Controller
                     }
                     else
                     {
-                        $value = $saldoNominal / $procurement_qty;
+                        $value = ($saldoNominal == null ? $item[$j]->procurement_total : $saldoNominal) / $procurement_qty;
                     }
                 }
 
@@ -292,6 +292,11 @@ class StockCardController extends Controller
                     $saldoMasuk = null;
                 }
 
+                if ($saldoMasuk > 0)
+                {
+                    $saldoNominal += $value * $saldoMasuk;
+                }
+
                 if($item[$j]->sales_qty != null)
                 {
                     $saldoKeluar = $item[$j]->sales_qty;
@@ -307,6 +312,11 @@ class StockCardController extends Controller
                 else
                 {
                     $saldoKeluar = null;
+                }
+
+                if ($saldoKeluar > 0)
+                {
+                    $saldoNominal -= $value * $saldoKeluar;
                 }
 
                 $result[$i]['items'][] = [
