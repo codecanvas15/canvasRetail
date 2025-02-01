@@ -271,14 +271,13 @@ class StockCardController extends Controller
         $stockAwal = DB::select("
             SELECT
                 a.item_code,
-                (sum(IFNULL(a.procurement_qty, 0))-sum(IFNULL(a.sales_qty,0))+sum(IFNULL(a.adjustment_qty,0))-sum(IFNULL(a.usage_qty,0))) as saldo_qty,
-                sum(IFNULL(a.procurement_total, 0)) as saldo_nominal
+                COALESCE(a.procurement_qty, a.sales_qty * -1, a.adjustment_qty, a.usage_qty * -1) as saldo_qty,
+                IFNULL(a.procurement_total, 0) as saldo_nominal
             FROM 
                 stock_value_sum a
             WHERE
                 a.tx_date <= STR_TO_DATE(?, '%m-%Y')
                 AND a.item_code = ?
-            GROUP BY a.item_code
             ORDER BY a.item_code, a.created_at
         ", [$filterMonth, $request->item_code]);
 
@@ -298,16 +297,33 @@ class StockCardController extends Controller
             $result[$i]['item_name'] = $items[$i]->name;
             $result[$i]['item_image'] = $items[$i]->image;
 
-            if(sizeof($item) > 0)
+            $value          = 0;
+            $saldoQty       = 0;
+            $saldoNominal   = 0;
+
+            foreach ($item as $key => $itemDet) 
             {
-                $result[$i]['saldo_qty'] = $item[0]->saldo_qty;
-                $result[$i]['saldo_nominal'] = $item[0]->saldo_nominal;
+                if ($itemDet->saldo_nominal == 0)
+                {
+                    $saldoNominal += $value * $itemDet->saldo_qty;
+                }
+                else
+                {
+                    $saldoNominal += $itemDet->saldo_nominal;
+                }
+                
+                $saldoQty += $itemDet->saldo_qty;
+                
+                if ($saldoQty != 0)
+                {
+                    $value = $saldoNominal / $saldoQty;
+                }
             }
-            else
-            {
-                $result[$i]['saldo_qty'] = 0;
-                $result[$i]['saldo_nominal'] = 0;
-            }
+
+            $saldoNominal = ($value < 0 ? $value * -1 : $value) * $saldoQty;
+
+            $result[$i]['saldo_qty']        = $saldoQty;
+            $result[$i]['saldo_nominal']    = $saldoNominal;
 
             $item = array_values(array_filter($stock, function($k) use ($item_code) {
                 return $k->item_code == $item_code;
