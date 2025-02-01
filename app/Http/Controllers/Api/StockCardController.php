@@ -66,13 +66,12 @@ class StockCardController extends Controller
         $stockAwal = DB::select("
             SELECT
                 a.item_code,
-                ((IFNULL(a.procurement_qty, 0))-(IFNULL(a.sales_qty,0))+(IFNULL(a.adjustment_qty,0))-(IFNULL(a.usage_qty,0))) as saldo_qty,
-                sum(IFNULL(a.procurement_total, 0)) as saldo_nominal
+                COALESCE(a.procurement_qty, a.sales_qty * -1, a.adjustment_qty, a.usage_qty * -1) as saldo_qty,
+                IFNULL(a.procurement_total, 0) as saldo_nominal
             FROM 
                 stock_value_sum a
             WHERE
                 a.tx_date <= STR_TO_DATE(?, '%m-%Y')
-            GROUP BY a.item_code, a.procurement_qty, a.sales_qty, a.adjustment_qty, a.usage_qty, a.created_at
             ORDER BY a.item_code, a.created_at
         ", [$filterMonth]);
 
@@ -95,20 +94,30 @@ class StockCardController extends Controller
 
             foreach ($itemStockAwal as $key => $itemDet) 
             {
-                if ($itemDet->saldo_nominal > 0)
+                if ($itemDet->saldo_nominal == 0)
                 {
-                    $value = $itemDet->saldo_nominal / $itemDet->saldo_qty;
+                    $saldoNominal += $value * $itemDet->saldo_qty;
                 }
-
+                else
+                {
+                    $saldoNominal += $itemDet->saldo_nominal;
+                }
+                
                 $saldoQty += $itemDet->saldo_qty;
+                
+                if ($saldoQty != 0)
+                {
+                    $value = $saldoNominal / $saldoQty;
+                }
             }
-            
-            $stockNominal = $saldoQty * $value;
+
+
+            $saldoNominal = ($value < 0 ? $value * -1 : $value) * $saldoQty;
 
             if(sizeof($itemStockAwal) > 0)
             {
                 $saldoQty        = $saldoQty;
-                $saldoNominal    = $stockNominal;
+                $saldoNominal    = $saldoNominal;
             }
 
             $itemStock = array_values(array_filter($stock, function($k) use ($item_code) {
@@ -176,7 +185,7 @@ class StockCardController extends Controller
 
                 if ($saldoKeluar > 0)
                 {
-                    $saldoNominal -= $value * $saldoKeluar;
+                    $saldoNominal += $value * $saldoKeluar;
                 }
 
             }
@@ -307,28 +316,20 @@ class StockCardController extends Controller
             $saldoQty = $result[$i]['saldo_qty'];
             $saldoNominal = $result[$i]['saldo_nominal'];
             $value = 0;
-            $procurement_qty = 0;
             $result[$i]['items'] = [];
+            $saldoMasuk = 0;
 
             for($j = 0; $j < sizeof($item); $j++)
             {
+                $initQty = $saldoQty;
                 $saldoQty = $saldoQty + ($item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ($item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ($item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ($item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
 
                 if ($item[$j]->procurement_total != null)
-                {
-                    // $saldoNominal += $item[$j]->procurement_total;
-
-                    $procurement_qty += $item[$j]->procurement_qty;
-
-                    if ($procurement_qty == 0)
-                    {
-                        $value = 0;
-                    }
-                    else
-                    {
-                        $value = ($saldoNominal == null ? $item[$j]->procurement_total : $saldoNominal) / $procurement_qty;
-                    }
+                {                    
+                    $saldoNominal = (($value * $initQty) + $item[$j]->procurement_total);
+                    $value = $saldoNominal / $saldoQty;
                 }
+
 
                 if ($item[$j]->sales_total != null)
                 {
@@ -359,11 +360,6 @@ class StockCardController extends Controller
                 else
                 {
                     $saldoMasuk = null;
-                }
-
-                if ($saldoMasuk > 0)
-                {
-                    $saldoNominal += $value * $saldoMasuk;
                 }
 
                 if($item[$j]->sales_qty != null)
@@ -401,13 +397,13 @@ class StockCardController extends Controller
                     'procurement_total' => $item[$j]->procurement_total,
                     'sales_date' => $item[$j]->sales_date,
                     'sales_qty' => $item[$j]->sales_qty,
-                    'sales_total' => $item[$j]->sales_total,
+                    'sales_total' => sprintf("%01.2f", $item[$j]->sales_total),
                     'adjustment_date' => $item[$j]->adjustment_date,
                     'adjustment_qty' => $item[$j]->adjustment_qty,
-                    'adjustment_total' => $adjustment_total,
+                    'adjustment_total' => sprintf("%01.2f", $adjustment_total),
                     'usage_date' => $item[$j]->usage_date,
                     'usage_qty' => $item[$j]->usage_qty,
-                    'usage_total' => $usage_total
+                    'usage_total' => sprintf("%01.2f", $usage_total)
                 ];
             }
         }
