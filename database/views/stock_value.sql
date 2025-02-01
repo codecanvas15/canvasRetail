@@ -1,4 +1,4 @@
-CREATE VIEW stock_value AS
+CREATE OR REPLACE VIEW stock_value AS
 SELECT
     i.item_code,
     i.name as item_name,
@@ -15,7 +15,8 @@ SELECT
     null as adjustment_qty,
     null as usage_date,
     null as usage_qty,
-    pd.created_at as created_at
+    pd.created_at as created_at,
+    p.doc_number as doc_number
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -41,7 +42,8 @@ SELECT
     null as adjustment_qty,
     null as usage_date,
     null as usage_qty,
-    sd.created_at as created_at
+    sd.created_at as created_at,
+    s.doc_number as doc_number
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -67,7 +69,8 @@ SELECT
     sa.qty as adjustment_qty,
     null as usage_date,
     null as usage_qty,
-    sah.created_at as created_at
+    sah.created_at as created_at,
+    sah.doc_number as doc_number
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -93,7 +96,8 @@ SELECT
     null as adjustment_qty,
     suh.transaction_date as usage_date,
     su.qty as usage_qty,
-    suh.created_at as created_at
+    suh.created_at as created_at,
+    suh.doc_number as doc_number
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1

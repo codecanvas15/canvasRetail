@@ -165,6 +165,7 @@ class StockCardController extends Controller
                 a.item_code,
                 a.item_name,
                 a.location_name,
+                COALESCE(a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date) as tx_date,
                 a.procurement_date,
                 a.procurement_qty,
                 a.procurement_total,
@@ -174,7 +175,8 @@ class StockCardController extends Controller
                 a.adjustment_date,
                 a.adjustment_qty,
                 a.usage_date,
-                a.usage_qty
+                a.usage_qty,
+                a.doc_number
             FROM 
                 stock_value a
             WHERE
@@ -277,7 +279,44 @@ class StockCardController extends Controller
                     $usage_total = $value;
                 }
 
+                if($item[$j]->procurement_date != null)
+                {
+                    $saldoMasuk = $item[$j]->procurement_qty;
+                }
+                else if ($item[$j]->adjustment_date != null && $item[$j]->adjustment_qty > 0)
+                {
+                    $saldoMasuk = $item[$j]->adjustment_qty;
+                }
+                else
+                {
+                    $saldoMasuk = null;
+                }
+
+                if($item[$j]->sales_qty != null)
+                {
+                    $saldoKeluar = $item[$j]->sales_qty;
+                }
+                else if ($item[$j]->adjustment_date != null && $item[$j]->adjustment_qty < 0)
+                {
+                    $saldoKeluar = $item[$j]->adjustment_qty;
+                }
+                else if ($item[$j]->usage_date != null)
+                {
+                    $saldoKeluar = $item[$j]->usage_qty;
+                }
+                else
+                {
+                    $saldoKeluar = null;
+                }
+
                 $result[$i]['items'][] = [
+                    'transaction_date' => $item[$j]->tx_date,
+                    'doc_number' => $item[$j]->doc_number,
+                    'saldo_keluar' => $saldoKeluar,
+                    'saldo_masuk' => $saldoMasuk,
+                    'value' => sprintf("%01.2f", $value),
+                    'saldo_qty' => $saldoQty,
+                    'saldo_nominal' => sprintf("%01.2f", $saldoNominal),
                     'procurement_date' => $item[$j]->procurement_date,
                     'procurement_qty' => $item[$j]->procurement_qty,
                     'procurement_total' => $item[$j]->procurement_total,
@@ -289,10 +328,7 @@ class StockCardController extends Controller
                     'adjustment_total' => $adjustment_total,
                     'usage_date' => $item[$j]->usage_date,
                     'usage_qty' => $item[$j]->usage_qty,
-                    'usage_total' => $usage_total,
-                    'saldo_qty' => $saldoQty,
-                    'saldo_nominal' => sprintf("%01.2f", $saldoNominal),
-                    'value' => sprintf("%01.2f", $value)
+                    'usage_total' => $usage_total
                 ];
             }
         }
