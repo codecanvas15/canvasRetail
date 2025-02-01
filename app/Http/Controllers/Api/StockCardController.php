@@ -362,6 +362,11 @@ class StockCardController extends Controller
                     $saldoMasuk = null;
                 }
 
+                if ($saldoMasuk > 0 && $item[$j]->procurement_total == null)
+                {
+                    $saldoNominal += $value * $saldoMasuk;
+                }
+
                 if($item[$j]->sales_qty != null)
                 {
                     $saldoKeluar = $item[$j]->sales_qty;
