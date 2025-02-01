@@ -125,7 +125,7 @@ class StockCardController extends Controller
             "status" => true,
             "data" => $stockList,
             "pagination" => [
-                "total" => $items->total(),
+                "total" => sizeof($stockList),
                 "per_page" => $items->perPage(),
                 "current_page" => $items->currentPage(),
                 "last_page" => $items->lastPage(),

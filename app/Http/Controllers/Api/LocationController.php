@@ -19,10 +19,17 @@ class LocationController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
             return response()->json([
                 "status" => false,
-                "message" => $validator->errors()
-            ]);
+                "message" => $errorMsg
+            ], 400);
         }
 
         Location::create([
@@ -73,10 +80,17 @@ class LocationController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
             return response()->json([
                 "status" => false,
-                "message" => $validator->errors()
-            ]);
+                "message" => $errorMsg
+            ], 400);
         }
 
         if (Location::where('id', $id)->exists())

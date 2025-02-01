@@ -33,10 +33,17 @@ class ProcurementController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
             return response()->json([
                 "status" => false,
-                "message" => $validator->errors()
-            ]);
+                "message" => $errorMsg
+            ], 400);
         }
 
         if (!Contact::where('id', $request->contact_id)->where('status', 1)->exists())
@@ -308,6 +315,11 @@ class ProcurementController extends Controller
     {
         $sortBy = $request->input('sort_by', 'procurement_date');
         $sortOrder = $request->input('sort_order', 'desc');
+        $search = $request->input('search', null);
+        $searchVendor = $request->input('search_vendor', null);
+        $searchProcurementDate = $request->input('search_procurement_date', null);
+        $searchDocNumber = $request->input('search_doc_number', null);
+
 
         if (!in_array($sortOrder, ['asc', 'desc'])) {
             $sortOrder = 'desc'; // Default to ascending if invalid
@@ -317,6 +329,30 @@ class ProcurementController extends Controller
 
         $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
               ->select('procurements.*', 'contacts.name as contact_name');
+
+        if ($search != null)
+        {
+            $query->where('contacts.name', 'like', '%' . $search . '%');
+            $query->orWhere('procurements.procurement_date', 'like', '%' . $search . '%');
+            $query->orWhere('procurements.doc_number', 'like', '%' . $search . '%');
+        }
+        else
+        {
+            if ($searchVendor != null)
+            {
+                $query->where('contacts.name', 'like', '%' . $searchVendor . '%');
+            }
+
+            if ($searchProcurementDate != null)
+            {
+                $query->where('procurements.procurement_date', 'like', '%' . $searchProcurementDate . '%');
+            }
+
+            if ($searchDocNumber != null)
+            {
+                $query->where('procurements.doc_number', 'like', '%' . $searchDocNumber . '%');
+            }
+        }
 
         $procurement = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $procurement->appends([
@@ -332,6 +368,7 @@ class ProcurementController extends Controller
                 'total_pages' => $procurement->lastPage(),
                 'next_page' => $procurement->nextPageUrl(),
                 'prev_page' => $procurement->previousPageUrl(),
+                'total_data' => $procurement->total(),
             ],
         ]);
     }

@@ -30,10 +30,17 @@ class SalesController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
             return response()->json([
                 "status" => false,
-                "message" => $validator->errors()
-            ]);
+                "message" => $errorMsg
+            ], 400);
         }
 
         if (!Contact::where('id', $request->contact_id)->where('status', 1)->exists())
@@ -215,7 +222,7 @@ class SalesController extends Controller
                 
                 return response()->json([
                     "status" => false,
-                    "message" => "Total Payment amount is greater than procurement amount."
+                    "message" => "Total Payment amount is greater than sales amount."
                 ], 400);
             }
             else if ($outstanding == 0)
@@ -305,6 +312,11 @@ class SalesController extends Controller
     {
         $sortBy = $request->input('sort_by', 'sales_date');
         $sortOrder = $request->input('sort_order', 'desc');
+        $search = $request->input('search', null);
+        $searchVendor = $request->input('search_vendor', null);
+        $searchsalesDate = $request->input('search_sales_date', null);
+        $searchDocNumber = $request->input('search_doc_number', null);
+
 
         if (!in_array($sortOrder, ['asc', 'desc'])) {
             $sortOrder = 'desc'; // Default to ascending if invalid
@@ -312,8 +324,32 @@ class SalesController extends Controller
 
         $query  = Sales::query();
 
-        $query->join('contacts', 'sales.contact_id', '=', 'contacts.id')
-              ->select('sales.*', 'contacts.name as contact_name');
+        $query->join('contacts', 'saless.contact_id', '=', 'contacts.id')
+              ->select('saless.*', 'contacts.name as contact_name');
+
+        if ($search != null)
+        {
+            $query->where('contacts.name', 'like', '%' . $search . '%');
+            $query->orWhere('saless.sales_date', 'like', '%' . $search . '%');
+            $query->orWhere('saless.doc_number', 'like', '%' . $search . '%');
+        }
+        else
+        {
+            if ($searchVendor != null)
+            {
+                $query->where('contacts.name', 'like', '%' . $searchVendor . '%');
+            }
+
+            if ($searchsalesDate != null)
+            {
+                $query->where('saless.sales_date', 'like', '%' . $searchsalesDate . '%');
+            }
+
+            if ($searchDocNumber != null)
+            {
+                $query->where('saless.doc_number', 'like', '%' . $searchDocNumber . '%');
+            }
+        }
 
         $sales = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $sales->appends([
@@ -329,6 +365,7 @@ class SalesController extends Controller
                 'total_pages' => $sales->lastPage(),
                 'next_page' => $sales->nextPageUrl(),
                 'prev_page' => $sales->previousPageUrl(),
+                'total_data' => $sales->total() 
             ],
         ]);
     }
