@@ -407,6 +407,95 @@ class SalesController extends Controller
         }
     }
 
+    public function getItemSales(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "search_item_code"        => "required"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $sortBy = $request->input('sort_by', 'sales_date');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $search = $request->input('search', null);
+        $searchVendor = $request->input('search_vendor', null);
+        $searchSalesDate = $request->input('search_sales_date', null);
+        $searchDocNumber = $request->input('search_doc_number', null);
+        $searchItemCode = $request->input('search_item_code', null);
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Sales::query();
+
+        $query->join('contacts', 'sales.contact_id', '=', 'contacts.id')
+                ->join('sales_details', 'sales.id', '=', 'sales_details.sales_id')
+                ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
+                ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                ->select('sales.sales_date', 'contacts.name as contact_name', 'items_details.item_code', 'locations.name as location_name', 'sales.doc_number', 'sales_details.qty as sales_qty', 'sales_details.price', 'sales_details.total');
+
+        if ($search != null)
+        {
+            $query->where('contacts.name', 'like', '%' . $search . '%');
+            $query->orWhere('sales.sales_date', 'like', '%' . $search . '%');
+            $query->orWhere('sales.doc_number', 'like', '%' . $search . '%');
+            $query->orWhere('items_details.item_code', 'like', '%' . $search . '%');
+        }
+        else
+        {
+            if ($searchVendor != null)
+            {
+                $query->where('contacts.name', 'like', '%' . $searchVendor . '%');
+            }
+
+            if ($searchSalesDate != null)
+            {
+                $query->where('sales.sales_date', 'like', '%' . $searchSalesDate . '%');
+            }
+
+            if ($searchDocNumber != null)
+            {
+                $query->where('sales.doc_number', 'like', '%' . $searchDocNumber . '%');
+            }
+
+            if ($searchItemCode != null)
+            {
+                $query->where('items_details.item_code', 'like', '%' . $searchItemCode . '%');
+            }
+        }
+
+        $sales = $query->orderBy($sortBy, $sortOrder)->orderBy('sales_date', 'desc')->paginate(10);
+        $sales->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'data' => $sales->items(),
+            'pagination' => [
+                'current_page' => $sales->currentPage(),
+                'total_pages' => $sales->lastPage(),
+                'next_page' => $sales->nextPageUrl(),
+                'prev_page' => $sales->previousPageUrl(),
+                'total_data' => $sales->total(),
+            ],
+        ]);
+    }
+
     public function deleteSales($id)
     {
         if (Sales::where('id', $id)->where('status', 1)->exists())

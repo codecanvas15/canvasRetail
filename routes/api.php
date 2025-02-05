@@ -47,9 +47,9 @@ Route::group([
     // item
     Route::post("item",[ItemController::class, "addItem"]);
     Route::get("item",[ItemController::class, "getItem"]);
-    Route::get("item/{item_code}",[ItemController::class, "getItemById"]);
-    Route::post("item/{item_code}",[ItemController::class, "updateItem"]);
-    Route::delete("item/{item_code}",[ItemController::class, "deleteItem"]);
+    Route::get("itemdetail",[ItemController::class, "getItemById"]);
+    Route::post("updateitem",[ItemController::class, "updateItem"]);
+    Route::delete("item",[ItemController::class, "deleteItem"]);
 
     // get categories
     Route::get("categories",[ItemController::class, "getUniqueCategories"]);
@@ -90,13 +90,15 @@ Route::group([
     Route::get("procurement/{id}", [ProcurementController::class, "getProcurementById"]);
     Route::delete("procurement/{id}", [ProcurementController::class, "deleteProcurement"]);
     Route::get("generatePo", [ProcurementController::class, "createPO"]);
-
+    Route::get("procurement-item-detail", [ProcurementController::class, "getItemProcurement"]);
+    
     // sales
     Route::post("sales", [SalesController::class, "addSales"]);
     Route::post("sales/{id}", [SalesController::class, "updateSales"]);
     Route::get("sales", [SalesController::class, "getSales"]);
     Route::get("sales/{id}", [SalesController::class, "getSalesById"]);
     Route::delete("sales/{id}", [SalesController::class, "deleteSales"]);
+    Route::get("sales-item-detail", [SalesController::class, "getItemSales"]);
 
     // payment
     Route::post("payment", [PaymentController::class, "payment"]);

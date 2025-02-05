@@ -17,7 +17,8 @@ class StockCardController extends Controller
     public function getStockCardList(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "month_year"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/']
+            "start_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/'],
+            "end_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/']
         ]);
 
         if ($validator->fails()) {
@@ -27,12 +28,28 @@ class StockCardController extends Controller
             ]);
         }
 
-        $date = new DateTime('now');
-        $filterMonth = $date->format('m-Y');
+        $startMonth = DateTime::createFromFormat('m-Y', $request->start_month);
+        $endMonth = DateTime::createFromFormat('m-Y', $request->end_month);
 
-        if ($request->month_year)
+        if ($startMonth > $endMonth) {
+            return response()->json([
+                "status" => false,
+                "message" => "The start month cannot be after the end month."
+            ], 400);
+        }
+
+        $date = new DateTime('now');
+        $filterStartMonth = $date->format('m-Y');
+        $filterEndMonth = $date->format('m-Y');
+
+        if ($request->start_month)
         {
-            $filterMonth = $request->month_year;
+            $filterStartMonth = $request->start_month;
+        }
+
+        if ($request->end_month)
+        {
+            $filterEndMonth = $request->end_month;
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -56,12 +73,20 @@ class StockCardController extends Controller
             FROM 
                 stock_value a
             WHERE
-                a.procurement_date >= STR_TO_DATE(?, '%m-%Y')
-                or a.sales_date >= STR_TO_DATE(?, '%m-%Y')
-                or a.adjustment_date >= STR_TO_DATE(?, '%m-%Y')
-                or a.usage_date >= STR_TO_DATE(?, '%m-%Y')
+                (
+                    a.procurement_date >= STR_TO_DATE(?, '%m-%Y')
+                    or a.sales_date >= STR_TO_DATE(?, '%m-%Y')
+                    or a.adjustment_date >= STR_TO_DATE(?, '%m-%Y')
+                    or a.usage_date >= STR_TO_DATE(?, '%m-%Y')
+                ) AND
+                (
+                    a.procurement_date <= STR_TO_DATE(?, '%m-%Y')
+                    or a.sales_date <= STR_TO_DATE(?, '%m-%Y')
+                    or a.adjustment_date <= STR_TO_DATE(?, '%m-%Y')
+                    or a.usage_date <= STR_TO_DATE(?, '%m-%Y')
+                )
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
-        ", [$filterMonth, $filterMonth, $filterMonth, $filterMonth]);
+        ", [$filterStartMonth, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth]);
 
         $stockAwal = DB::select("
             SELECT
@@ -73,7 +98,7 @@ class StockCardController extends Controller
             WHERE
                 a.tx_date <= STR_TO_DATE(?, '%m-%Y')
             ORDER BY a.item_code, a.created_at
-        ", [$filterMonth]);
+        ", [$filterStartMonth]);
 
         $items = Item::where('status', 1)->paginate(10); // Add pagination here
 
@@ -216,7 +241,8 @@ class StockCardController extends Controller
     public function getStockCardDetails(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "month_year"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/'],
+            "start_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/'],
+            "end_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/'],
             "item_code"   => ['required']
         ]);
 
@@ -227,12 +253,28 @@ class StockCardController extends Controller
             ]);
         }
 
-        $date = new DateTime('now');
-        $filterMonth = $date->format('m-Y');
+        $startMonth = DateTime::createFromFormat('m-Y', $request->start_month);
+        $endMonth = DateTime::createFromFormat('m-Y', $request->end_month);
 
-        if ($request->month_year)
+        if ($startMonth > $endMonth) {
+            return response()->json([
+                "status" => false,
+                "message" => "The start month cannot be after the end month."
+            ], 400);
+        }
+
+        $date = new DateTime('now');
+        $filterStartMonth = $date->format('m-Y');
+        $filterEndMonth = $date->format('m-Y');
+
+        if ($request->start_month)
         {
-            $filterMonth = $request->month_year;
+            $filterStartMonth = $request->start_month;
+        }
+
+        if ($request->end_month)
+        {
+            $filterEndMonth = $request->end_month;
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -265,8 +307,14 @@ class StockCardController extends Controller
                     or a.adjustment_date >= STR_TO_DATE(?, '%m-%Y')
                     or a.usage_date >= STR_TO_DATE(?, '%m-%Y')
                 )
+                AND (
+                    a.procurement_date <= STR_TO_DATE(?, '%m-%Y')
+                    or a.sales_date <= STR_TO_DATE(?, '%m-%Y')
+                    or a.adjustment_date <= STR_TO_DATE(?, '%m-%Y')
+                    or a.usage_date <= STR_TO_DATE(?, '%m-%Y')
+                )
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", [$request->item_code, $filterMonth, $filterMonth, $filterMonth, $filterMonth]);
+        ", [$request->item_code, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth]);
 
         $stockAwal = DB::select("
             SELECT
@@ -279,7 +327,7 @@ class StockCardController extends Controller
                 a.tx_date <= STR_TO_DATE(?, '%m-%Y')
                 AND a.item_code = ?
             ORDER BY a.item_code, a.created_at
-        ", [$filterMonth, $request->item_code]);
+        ", [$filterStartMonth, $request->item_code]);
 
         $result = [];
 

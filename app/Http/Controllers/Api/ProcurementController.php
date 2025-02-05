@@ -114,26 +114,34 @@ class ProcurementController extends Controller
             $totalAmount = 0;
             // insert procurement
             $procurement = Procurement::create([
-                'contact_id'        => $request->contact_id,
-                'procurement_date'  => $procurementDate,
-                'amount'            => 0,
-                'pay_status'        => null,
-                'created_by'        => auth()->user()->id,
-                'updated_by'        => auth()->user()->id,
-                'status'            => 1,
-                'doc_number'        => $documentNumber,
-                'include_tax'       => $request->include_tax == 1 ? true : false,
+                'contact_id'            => $request->contact_id,
+                'procurement_date'      => $procurementDate,
+                'amount'                => 0,
+                'pay_status'            => null,
+                'created_by'            => auth()->user()->id,
+                'updated_by'            => auth()->user()->id,
+                'status'                => 1,
+                'doc_number'            => $documentNumber,
+                'include_tax'           => $request->include_tax == 1 ? true : false,
+                'rounding'              => (float)($request->round),
+                'external_doc_no'       => $request->external_doc_no,
             ]);
 
             foreach ($request->items as $item)
             {
                 $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
 
+                $discounts = $item['discounts'] ?? [];
+
                 if ($request->include_tax)
                 {
-                    $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-                    
-                    $priceAfterDiscount = $item['price'] - $discount;
+                    $priceAfterDiscount = $item['price'];
+                    foreach ($discounts as $discount)
+                    {
+                        $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
+                        
+                        $priceAfterDiscount = $priceAfterDiscount - $discount;
+                    }
 
                     $itemPrice = $priceAfterDiscount / (1 + $tax/100);
                     
@@ -141,9 +149,13 @@ class ProcurementController extends Controller
                 }
                 else
                 {
-                    $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-
-                    $priceAfterDiscount = $item['price'] - $discount;
+                    $priceAfterDiscount = $item['price'];
+                    foreach ($discounts as $discount)
+                    {
+                        $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
+                        
+                        $priceAfterDiscount = $priceAfterDiscount - $discount;
+                    }
 
                     $itemPrice = $priceAfterDiscount;
 
@@ -193,11 +205,13 @@ class ProcurementController extends Controller
                     'created_by'        => auth()->user()->id,
                     'updated_by'        => auth()->user()->id,
                     'status'            => 1,
-                    'discount'          => $discount
+                    'discount'          => implode('|', $discounts)
                 ]);
 
                 $totalAmount += ($total + $total * ($tax/100));
             }
+
+            // $totalAmount += $request->round;
 
             if ($request->rounding === 'down') 
             {
@@ -209,7 +223,7 @@ class ProcurementController extends Controller
             } 
             else 
             {
-                $roundedAmount = round($totalAmount);
+                $roundedAmount = round($totalAmount,2);
             }
 
             $outstanding = $roundedAmount - $request->pay_amount;
@@ -320,6 +334,88 @@ class ProcurementController extends Controller
         $searchProcurementDate = $request->input('search_procurement_date', null);
         $searchDocNumber = $request->input('search_doc_number', null);
 
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc'; // Default to ascending if invalid
+        }
+
+        $query  = Procurement::query();
+
+        $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
+                ->join('procurement_details', 'procurements.id', '=', 'procurement_details.procurement_id')
+                ->select('procurements.*', 'contacts.name as contact_name');
+
+        if ($search != null)
+        {
+            $query->where('contacts.name', 'like', '%' . $search . '%');
+            $query->orWhere('procurements.procurement_date', 'like', '%' . $search . '%');
+            $query->orWhere('procurements.doc_number', 'like', '%' . $search . '%');
+            $query->orWhere('procurements.external_doc_no', 'like', '%' . $search . '%');
+        }
+        else
+        {
+            if ($searchVendor != null)
+            {
+                $query->where('contacts.name', 'like', '%' . $searchVendor . '%');
+            }
+
+            if ($searchProcurementDate != null)
+            {
+                $query->where('procurements.procurement_date', 'like', '%' . $searchProcurementDate . '%');
+            }
+
+            if ($searchDocNumber != null)
+            {
+                $query->where('procurements.doc_number', 'like', '%' . $searchDocNumber . '%');
+                $query->orWhere('procurements.external_doc_no', 'like', '%' . $searchDocNumber . '%');
+            }
+        }
+
+        $procurement = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
+        $procurement->appends([
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'data' => $procurement->items(),
+            'pagination' => [
+                'current_page' => $procurement->currentPage(),
+                'total_pages' => $procurement->lastPage(),
+                'next_page' => $procurement->nextPageUrl(),
+                'prev_page' => $procurement->previousPageUrl(),
+                'total_data' => $procurement->total(),
+            ],
+        ]);
+    }
+
+    public function getItemProcurement(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "search_item_code"        => "required"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $sortBy = $request->input('sort_by', 'procurement_date');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $search = $request->input('search', null);
+        $searchVendor = $request->input('search_vendor', null);
+        $searchProcurementDate = $request->input('search_procurement_date', null);
+        $searchDocNumber = $request->input('search_doc_number', null);
+        $searchItemCode = $request->input('search_item_code', null);
 
         if (!in_array($sortOrder, ['asc', 'desc'])) {
             $sortOrder = 'desc'; // Default to ascending if invalid
@@ -328,13 +424,17 @@ class ProcurementController extends Controller
         $query  = Procurement::query();
 
         $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
-              ->select('procurements.*', 'contacts.name as contact_name');
+                ->join('procurement_details', 'procurements.id', '=', 'procurement_details.procurement_id')
+                ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
+                ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                ->select('procurements.procurement_date', 'contacts.name as contact_name', 'items_details.item_code', 'locations.name as location_name', 'procurements.doc_number', 'procurement_details.qty as procurement_qty', 'procurement_details.price', 'procurement_details.total');
 
         if ($search != null)
         {
             $query->where('contacts.name', 'like', '%' . $search . '%');
             $query->orWhere('procurements.procurement_date', 'like', '%' . $search . '%');
             $query->orWhere('procurements.doc_number', 'like', '%' . $search . '%');
+            $query->orWhere('items_details.item_code', 'like', '%' . $search . '%');
         }
         else
         {
@@ -352,9 +452,14 @@ class ProcurementController extends Controller
             {
                 $query->where('procurements.doc_number', 'like', '%' . $searchDocNumber . '%');
             }
+
+            if ($searchItemCode != null)
+            {
+                $query->where('items_details.item_code', 'like', '%' . $searchItemCode . '%');
+            }
         }
 
-        $procurement = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
+        $procurement = $query->orderBy($sortBy, $sortOrder)->orderBy('procurement_date', 'desc')->paginate(10);
         $procurement->appends([
             'sort_by' => $sortBy,
             'sort_order' => $sortOrder,

@@ -42,7 +42,18 @@ class ItemController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json($validator->errors(), 422);
+            
+                $errorMsg = '';
+                
+                foreach ($validator->errors()->all() as $error)
+                {
+                    $errorMsg .= $error . '<br>';
+                }
+                
+                return response()->json([
+                    "status" => false,
+                    "message" => $errorMsg
+                ], 422);
             }
 
             if ($request->hasFile('image')) {
@@ -97,8 +108,29 @@ class ItemController extends Controller
         ]);
     }
 
-    public function updateItem(Request $request, $item_code)
+    public function updateItem(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            "item_code" => "required"
+        ]);
+
+        if ($validator->fails()) {
+            
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $item_code = $request->item_code;
+
         if (Item::where('item_code', $item_code)->exists())
         {
             $item = Item::where('item_code', $item_code)->first()->get();
@@ -145,8 +177,29 @@ class ItemController extends Controller
         }
     }
 
-    public function deleteItem($item_code)
+    public function deleteItem(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            "item_code" => "required"
+        ]);
+
+        if ($validator->fails()) {
+            
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $item_code = $request->item_code;
+
         if (Item::where('item_code', $item_code)->exists())
         {
             Item::where('item_code', $item_code)
@@ -170,8 +223,29 @@ class ItemController extends Controller
         }
     }
 
-    public function getItemById($item_code)
+    public function getItemById(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            "item_code" => "required"
+        ]);
+
+        if ($validator->fails()) {
+            
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $item_code = $request->item_code;
+
         if (Item::where('item_code', $item_code)->where('status', 1)->exists())
         {
             $item = Item::where('item_code', $item_code)->first();

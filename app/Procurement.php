@@ -17,6 +17,8 @@ class Procurement extends XModel
         'updated_by',
         'status',
         'doc_number',
-        'include_tax'
+        'include_tax',
+        'rounding',
+        'external_doc_no'
     ];
 }
