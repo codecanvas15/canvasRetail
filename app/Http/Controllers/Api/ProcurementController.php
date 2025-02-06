@@ -211,7 +211,7 @@ class ProcurementController extends Controller
                 $totalAmount += ($total + $total * ($tax/100));
             }
 
-            // $totalAmount += $request->round;
+            $totalAmount += $request->round;
 
             if ($request->rounding === 'down') 
             {
