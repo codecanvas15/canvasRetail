@@ -192,15 +192,6 @@ class ProcurementController extends Controller
                     ]);
                 }
 
-                if ($request->include_tax)
-                {
-                    $total = $item['qty'] * $itemPrice;
-                }
-                else
-                {
-                    $total = $item['qty'] * ($item['price']);
-                }
-
                 // insert to procurement detail
                 ProcurementDetail::create([
                     'procurement_id'    => $procurement->id,
@@ -215,7 +206,7 @@ class ProcurementController extends Controller
                     'discount'          => implode('|', $discounts),
                     'initial_price'     => $item['price']
                 ]);
-
+                
                 $totalAmount += ($total + $total * ($tax/100));
             }
 
