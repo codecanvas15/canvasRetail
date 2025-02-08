@@ -123,7 +123,7 @@ class ItemController extends Controller
 
         if (Item::where('item_code', $item_code)->exists())
         {
-            $item = Item::where('item_code', $item_code)->first()->get();
+            $item = Item::where('item_code', $item_code)->first();
 
             $imagePath = '';
             if($request->image)
@@ -143,15 +143,17 @@ class ItemController extends Controller
                     $imagePath =asset('storage/images/' . $imageName);
                 }
             }
+            // dd($item);
 
             Item::where('item_code', $item_code)
             ->update([
+                'item_code'  => $request->new_item_code ? $request->new_item_code : $item->item_code,
                 'name'       => $request->name ? $request->name : $item->name,
                 'image'      => $imagePath,
                 'category'   => $request->category ? $request->category : $item->category,
                 'updated_at' => date("Y-m-d H:i:s"),
                 'updated_by' => auth()->user()->id
-            ]);
+            ]);            
 
             return response()->json([
                 "status" => true,
@@ -243,6 +245,7 @@ class ItemController extends Controller
             $itemDet = DB::table('items_details')
                         ->join('locations', 'items_details.location_id', '=', 'locations.id')
                         ->where('items_details.status', 1)
+                        ->where('items_details.item_code', $item_code)
                         ->select('items_details.qty', 'items_details.price', 'locations.name AS location')
                         ->get();
 
