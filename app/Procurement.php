@@ -19,6 +19,7 @@ class Procurement extends XModel
         'doc_number',
         'include_tax',
         'rounding',
-        'external_doc_no'
+        'external_doc_no',
+        'tax'
     ];
 }

@@ -107,6 +107,7 @@ class SalesController extends Controller
             $taxes = explode(',', $request->tax_ids);
 
             $tax = Tax::whereIn('id', $taxes)->sum('value');
+            $taxes = Tax::whereIn('id', $taxes)->get();
 
             // insert sales
             $sales = Sales::create([
@@ -123,6 +124,7 @@ class SalesController extends Controller
             ]);
 
             $totalAmount = 0.00;
+            $totalTax = [];
 
             foreach ($request->items as $item)
             {
@@ -135,6 +137,19 @@ class SalesController extends Controller
                     $priceAfterDiscount = $item['price'] - $discount;
 
                     $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+
+                    for ($i = 0; $i < count($taxes); $i++)
+                    {                        
+                        if (isset($totalTax[$i]))
+                        {
+                            $totalTax[$i] += round($itemPrice * ($taxes[$i]->value/100), 2);
+                        }
+                        else
+                        {
+                            $totalTax[] = round($itemPrice * ($taxes[$i]->value/100), 2);
+                        }
+                    }
+
                     $total = $item['qty'] * $itemPrice;
                 }
                 else
@@ -144,6 +159,18 @@ class SalesController extends Controller
                     $priceAfterDiscount = $item['price'] - $discount;
 
                     $itemPrice = $priceAfterDiscount;
+
+                    for ($i = 0; $i < count($taxes); $i++)
+                    {                        
+                        if (isset($totalTax[$i]))
+                        {
+                            $totalTax[$i] += round($itemPrice * ($taxes[$i]->value/100), 2);
+                        }
+                        else
+                        {
+                            $totalTax[] = round($itemPrice * ($taxes[$i]->value/100), 2);
+                        }
+                    }
 
                     $total = $item['qty'] * $itemPrice;
                 }
@@ -191,7 +218,8 @@ class SalesController extends Controller
                     'created_by'        => auth()->user()->id,
                     'updated_by'        => auth()->user()->id,
                     'status'            => 1,
-                    'discount'          => $discount
+                    'discount'          => $discount,
+                    'initial_price'     => $item['price']
                 ]);
 
                 $totalAmount += ($total + $total * ($tax/100));
@@ -242,7 +270,8 @@ class SalesController extends Controller
                 'amount'        => $roundedAmount,
                 'pay_status'    => $paymentStatus,
                 'updated_by'    => auth()->user()->id,
-                'updated_at'    => date("Y-m-d H:i:s")
+                'updated_at'    => date("Y-m-d H:i:s"),
+                'tax'           => implode('|', $totalTax)
             ]);
 
             Payment::create([
