@@ -55,21 +55,11 @@ class LocationController extends Controller
         }
 
         $query  = Location::query();
-        $locations = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->paginate(10);
-        $locations->appends([
-            'sort_by' => $sortBy,
-            'sort_order' => $sortOrder,
-        ]);
+        $locations = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->get();
 
         return response()->json([
             'status' => true,
-            'data' => $locations->items(),
-            'pagination' => [
-                'current_page' => $locations->currentPage(),
-                'total_pages' => $locations->lastPage(),
-                'next_page' => $locations->nextPageUrl(),
-                'prev_page' => $locations->previousPageUrl(),
-            ],
+            'data' => $locations
         ]);
     }
 

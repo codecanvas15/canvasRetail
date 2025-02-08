@@ -72,21 +72,11 @@ class ContactController extends Controller
         }
 
         $query  = Contact::query();
-        $contacts = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->paginate(10);
-        $contacts->appends([
-            'sort_by' => $sortBy,
-            'sort_order' => $sortOrder,
-        ]);
+        $contacts = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->get();
 
         return response()->json([
             'status' => true,
-            'data' => $contacts->items(),
-            'pagination' => [
-                'current_page' => $contacts->currentPage(),
-                'total_pages' => $contacts->lastPage(),
-                'next_page' => $contacts->nextPageUrl(),
-                'prev_page' => $contacts->previousPageUrl(),
-            ],
+            'data' => $contacts
         ]);
     }
 

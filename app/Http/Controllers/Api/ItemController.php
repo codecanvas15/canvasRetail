@@ -90,21 +90,11 @@ class ItemController extends Controller
         }
 
         $query  = Item::query();
-        $item = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->paginate(10);
-        $item->appends([
-            'sort_by' => $sortBy,
-            'sort_order' => $sortOrder,
-        ]);
+        $item = $query->where('status', 1)->orderBy($sortBy, $sortOrder)->get();
 
         return response()->json([
             'status' => true,
-            'data' => $item->items(),
-            'pagination' => [
-                'current_page' => $item->currentPage(),
-                'total_pages' => $item->lastPage(),
-                'next_page' => $item->nextPageUrl(),
-                'prev_page' => $item->previousPageUrl(),
-            ],
+            'data' => $item
         ]);
     }
 
