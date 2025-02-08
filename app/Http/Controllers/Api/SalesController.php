@@ -118,7 +118,8 @@ class SalesController extends Controller
                 'updated_by' => auth()->user()->id,
                 'status'     => 1,
                 'doc_number' => $documentNumber,
-                'bank_id'    => $request->bank_id ?? null
+                'bank_id'    => $request->bank_id ?? null,
+                'rounding'   => (float)($request->round)
             ]);
 
             $totalAmount = 0.00;
@@ -181,20 +182,22 @@ class SalesController extends Controller
 
                 // insert sales detail
                 SalesDetail::create([
-                    'sales_id' => $sales->id,
-                    'item_detail_id' => $itemDet['id'],
-                    'qty' => $item['qty'],
-                    'price' => $itemPrice,
-                    'total' => $total,
-                    'tax_ids' => $request->tax_ids,
-                    'created_by' => auth()->user()->id,
-                    'updated_by' => auth()->user()->id,
-                    'status' => 1,
-                    'discount' => $discount
+                    'sales_id'          => $sales->id,
+                    'item_detail_id'    => $itemDet['id'],
+                    'qty'               => $item['qty'],
+                    'price'             => $itemPrice,
+                    'total'             => $total,
+                    'tax_ids'           => $request->tax_ids,
+                    'created_by'        => auth()->user()->id,
+                    'updated_by'        => auth()->user()->id,
+                    'status'            => 1,
+                    'discount'          => $discount
                 ]);
 
                 $totalAmount += ($total + $total * ($tax/100));
             }
+
+            $totalAmount += $request->round;
 
             if ($request->rounding === 'down') 
             {
