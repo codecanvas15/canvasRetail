@@ -149,7 +149,7 @@ class ItemController extends Controller
             ->update([
                 'item_code'  => $request->new_item_code ? $request->new_item_code : $item->item_code,
                 'name'       => $request->name ? $request->name : $item->name,
-                'image'      => $imagePath,
+                'image'      => $imagePath == '' ? $item->image : $imagePath,
                 'category'   => $request->category ? $request->category : $item->category,
                 'updated_at' => date("Y-m-d H:i:s"),
                 'updated_by' => auth()->user()->id
