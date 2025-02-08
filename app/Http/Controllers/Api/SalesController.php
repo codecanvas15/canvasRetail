@@ -108,6 +108,12 @@ class SalesController extends Controller
 
             $tax = Tax::whereIn('id', $taxes)->sum('value');
             $taxes = Tax::whereIn('id', $taxes)->get();
+            
+            $totalTax = [];
+            foreach ($taxes as $key)
+            {
+                $totalTax[] = $key->value;
+            }
 
             // insert sales
             $sales = Sales::create([
@@ -124,7 +130,6 @@ class SalesController extends Controller
             ]);
 
             $totalAmount = 0.00;
-            $totalTax = [];
 
             foreach ($request->items as $item)
             {
@@ -138,18 +143,6 @@ class SalesController extends Controller
 
                     $itemPrice = $priceAfterDiscount / (1 + $tax/100);
 
-                    for ($i = 0; $i < count($taxes); $i++)
-                    {                        
-                        if (isset($totalTax[$i]))
-                        {
-                            $totalTax[$i] += round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                        else
-                        {
-                            $totalTax[] = round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                    }
-
                     $total = $item['qty'] * $itemPrice;
                 }
                 else
@@ -159,18 +152,6 @@ class SalesController extends Controller
                     $priceAfterDiscount = $item['price'] - $discount;
 
                     $itemPrice = $priceAfterDiscount;
-
-                    for ($i = 0; $i < count($taxes); $i++)
-                    {                        
-                        if (isset($totalTax[$i]))
-                        {
-                            $totalTax[$i] += round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                        else
-                        {
-                            $totalTax[] = round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                    }
 
                     $total = $item['qty'] * $itemPrice;
                 }
@@ -265,6 +246,7 @@ class SalesController extends Controller
             {
                 $paymentStatus = 'Unpaid';
             }
+            // dd($totalTax)
 
             $sales->update([
                 'amount'        => $roundedAmount,
@@ -294,6 +276,7 @@ class SalesController extends Controller
         }
         catch (\Throwable $th)
         {
+            dd($th);
             DB::rollBack();
 
             return response()->json([

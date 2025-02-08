@@ -112,6 +112,12 @@ class ProcurementController extends Controller
             $tax = Tax::whereIn('id', $taxes)->sum('value');
             $taxes = Tax::whereIn('id', $taxes)->get();
 
+            $totalTax = [];
+            foreach ($taxes as $key)
+            {
+                $totalTax[] = $key->value;
+            }
+
             $totalAmount = 0;
             // insert procurement
             $procurement = Procurement::create([
@@ -127,8 +133,6 @@ class ProcurementController extends Controller
                 'rounding'              => (float)($request->round),
                 'external_doc_no'       => $request->external_doc_no,
             ]);
-
-            $totalTax = [];
 
             foreach ($request->items as $item)
             {
@@ -148,18 +152,6 @@ class ProcurementController extends Controller
 
                     $itemPrice = $priceAfterDiscount / (1 + $tax/100);
                     
-                    for ($i = 0; $i < count($taxes); $i++)
-                    {                        
-                        if (isset($totalTax[$i]))
-                        {
-                            $totalTax[$i] += round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                        else
-                        {
-                            $totalTax[] = round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                    }
-                    
                     $total = $item['qty'] * $itemPrice;
                 }
                 else
@@ -173,18 +165,6 @@ class ProcurementController extends Controller
                     }
 
                     $itemPrice = $priceAfterDiscount;
-
-                    for ($i = 0; $i < count($taxes); $i++)
-                    {                        
-                        if (isset($totalTax[$i]))
-                        {
-                            $totalTax[$i] += round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                        else
-                        {
-                            $totalTax[] = round($itemPrice * ($taxes[$i]->value/100), 2);
-                        }
-                    }
 
                     $total = $item['qty'] * $itemPrice;
                 }
@@ -370,7 +350,6 @@ class ProcurementController extends Controller
         $query  = Procurement::query();
 
         $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
-                ->join('procurement_details', 'procurements.id', '=', 'procurement_details.procurement_id')
                 ->select('procurements.*', 'contacts.name as contact_name');
 
         if ($search != null)
