@@ -22,6 +22,7 @@
     </style>
 </head>
 <body>
+    @foreach ($data['details'] as $index => $items)
     <div class="container">
         <table class="header-table" style="width: 100%;">
             <tr>
@@ -78,7 +79,7 @@
             </thead>
             <tbody style="vertical-align: top;">
                 @php $total_bruto = 0; @endphp
-                @foreach ($data['details'] as $index => $item)
+                @foreach ($items as $index => $item)
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $item->item_name }}</td>
@@ -150,5 +151,6 @@
             </tr>
         </table>        
     </div>
+    @endforeach
 </body>
 </html>

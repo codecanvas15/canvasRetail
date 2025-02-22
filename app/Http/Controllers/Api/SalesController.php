@@ -640,22 +640,18 @@ class SalesController extends Controller
             $chunks = $salesDet->chunk(10);
 
             $pdfPaths = [];
-            foreach ($chunks as $index => $chunk) {
-                $data['details'] = $chunk;
+            $data['details'] = $chunks;
+            $htmlContent = view('faktur', ['data' => $data])->render();
+            $htmlPath = public_path() . '/html/' . $sales['doc_number'] . time() . '.html';
+            file_put_contents($htmlPath, $htmlContent);
 
-                // Save HTML content to a file
-                $htmlContent = view('faktur', ['data' => $data])->render();
-                $htmlPath = public_path() . '/html/' . $sales['doc_number'] . time() . '-' . ($index + 1) . '.html';
-                file_put_contents($htmlPath, $htmlContent);
+            // Generate PDF from the saved HTML file
+            $pdfPath = public_path() . '/pdf/' . $sales['doc_number'] . time() . '.pdf';
+            $pdf = PDF::loadHTML($htmlContent)
+                ->setPaper('a5', 'landscape'); // Set paper size to A5 and orientation to landscape
+            $pdf->save($pdfPath);
 
-                // Generate PDF from the saved HTML file
-                $pdfPath = public_path() . '/pdf/' . $sales['doc_number'] . time() . '-' . ($index + 1) . '.pdf';
-                $pdf = PDF::loadHTML($htmlContent)
-                    ->setPaper('a5', 'landscape'); // Set paper size to A5 and orientation to landscape
-                $pdf->save($pdfPath);
-
-                $pdfPaths[] = url('/pdf/' . basename($pdfPath));
-            }
+            $pdfPaths = url('/pdf/' . basename($pdfPath));
 
             return response()->json([
                 "status"    => true,
