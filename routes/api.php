@@ -99,10 +99,12 @@ Route::group([
     Route::get("sales/{id}", [SalesController::class, "getSalesById"]);
     Route::delete("sales/{id}", [SalesController::class, "deleteSales"]);
     Route::get("sales-item-detail", [SalesController::class, "getItemSales"]);
+    Route::get("faktur", [SalesController::class, "faktur"]);
 
     // payment
     Route::post("payment", [PaymentController::class, "payment"]);
     Route::get("payment", [PaymentController::class, "getPayment"]);
+    Route::get("pay-receipt", [PaymentController::class, "payReceipt"]);
 
     // refund
     Route::post("refund", [RefundController::class, "refund"]);

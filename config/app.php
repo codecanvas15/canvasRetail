@@ -230,7 +230,7 @@ return [
         'Jwt' => Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
         'JWTFactory' => Tymon\JWTAuth\Facades\JWTFactory::class,
         'JWTAuth' => Tymon\JWTAuth\Facades\JWTAuth::class,
-        'PDF' => 'Barryvdh\DomPDF\Facade',
+        'PDF' => Barryvdh\DomPDF\Facade\Pdf::class,
     ],
 
 ];

@@ -21,6 +21,8 @@ class Sales extends XModel
         'doc_number',
         'rounding',
         'bank_id',
-        'tax'
+        'tax',
+        'location_id',
+        'reason',
     ];
 }

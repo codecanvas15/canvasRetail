@@ -11,6 +11,7 @@ use App\Payment;
 use App\Sales;
 use App\SalesDetail;
 use App\Tax;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -117,16 +118,18 @@ class SalesController extends Controller
 
             // insert sales
             $sales = Sales::create([
-                'contact_id' => $request->contact_id,
-                'sales_date' => $salesDate,
-                'amount'     => 0,
-                'pay_status' => null,
-                'created_by' => auth()->user()->id,
-                'updated_by' => auth()->user()->id,
-                'status'     => 1,
-                'doc_number' => $documentNumber,
-                'bank_id'    => $request->bank_id ?? null,
-                'rounding'   => (float)($request->round)
+                'contact_id'    => $request->contact_id,
+                'sales_date'    => $salesDate,
+                'amount'        => 0,
+                'pay_status'    => null,
+                'created_by'    => auth()->user()->id,
+                'updated_by'    => auth()->user()->id,
+                'status'        => 1,
+                'doc_number'    => $documentNumber,
+                'bank_id'       => $request->bank_id ?? null,
+                'rounding'      => (float)($request->round),
+                'location_id'   => $request->location_id,
+                'reason'        => $request->notes ?? null,
             ]);
 
             $totalAmount = 0.00;
@@ -271,12 +274,13 @@ class SalesController extends Controller
 
             return response()->json([
                 "status" => true,
-                "message" => "Sales Success"
+                "message" => "Sales Success",
+                "sales_id" => $sales->id
             ]);
         }
         catch (\Throwable $th)
         {
-            dd($th);
+            // dd($th);
             DB::rollBack();
 
             return response()->json([
@@ -329,9 +333,17 @@ class SalesController extends Controller
         $sortOrder = $request->input('sort_order', 'desc');
         $search = $request->input('search', null);
         $searchVendor = $request->input('search_vendor', null);
-        $searchsalesDate = $request->input('search_sales_date', null);
         $searchDocNumber = $request->input('search_doc_number', null);
 
+        $startSalesDate = $request->input('search_start_sales_date', null);
+        $endSalesDate = $request->input('search_end_sales_date', null);
+
+        if ($startSalesDate > $endSalesDate) {
+            return response()->json([
+                "status" => false,
+                "message" => "The start date cannot be after the end date."
+            ], 400);
+        }
 
         if (!in_array($sortOrder, ['asc', 'desc'])) {
             $sortOrder = 'desc'; // Default to ascending if invalid
@@ -345,7 +357,6 @@ class SalesController extends Controller
         if ($search != null)
         {
             $query->where('contacts.name', 'like', '%' . $search . '%');
-            $query->orWhere('sales.sales_date', 'like', '%' . $search . '%');
             $query->orWhere('sales.doc_number', 'like', '%' . $search . '%');
         }
         else
@@ -354,15 +365,22 @@ class SalesController extends Controller
             {
                 $query->where('contacts.name', 'like', '%' . $searchVendor . '%');
             }
-
-            if ($searchsalesDate != null)
-            {
-                $query->where('sales.sales_date', 'like', '%' . $searchsalesDate . '%');
-            }
-
             if ($searchDocNumber != null)
             {
                 $query->where('sales.doc_number', 'like', '%' . $searchDocNumber . '%');
+            }
+
+            if ($startSalesDate != null && $endSalesDate != null)
+            {
+                $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
+            }
+
+            if ($searchVendor == null && $searchDocNumber == null && $startSalesDate == null && $endSalesDate == null)
+            {
+                $startSalesDate = (new DateTime($startSalesDate))->modify('first day of this month')->format('Y-m-d');
+                $date = new DateTime('now');
+                $endSalesDate = $date->format('Y-m-d');
+                $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
             }
         }
 
@@ -545,6 +563,103 @@ class SalesController extends Controller
             return response()->json([
                 "status"    => true,
                 "message" => "Sales deleted"
+            ]);
+        }
+        else
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Sales not found"
+            ], 404);
+        }
+    }
+
+    public function createDocs(Request $request)
+    {
+        $path = public_path() . '/pdf/' . time() . '.pdf';
+
+        $pdf = PDF::loadView('pdf');
+
+        $pdf->save($path);
+
+        return response()->download($path);
+    }
+
+    public function faktur(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "sales_id"        => "required"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $id = $request->sales_id;
+
+        if(Sales::where('id', $id)->where('status',1)->exists())
+        {
+            $sales = Sales::where('id', $id)->where('status', 1)->first();
+
+            $contact = Contact::where('id', $sales->contact_id)->first();
+
+            $salesDet = DB::table('sales_details')
+                            ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
+                            ->join('items', 'items_details.item_code', '=', 'items.item_code')
+                            ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                            ->where('sales_details.sales_id', $id)
+                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.item_code as item_code', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->get();
+
+            $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();
+
+            $location = Location::where('id', $sales->location_id)->first();
+
+            $data = $sales;
+            $data['contact_name'] = $contact->name;
+            $data['contact_address'] = $contact->address;
+            $data['location_name'] = $location->name;
+            $data['details'] = $salesDet;
+            $data['payments'] = $paymentDet;
+            $data['total'] = $salesDet->sum('total');
+            $tax = explode('|', $sales->tax);
+            $data['ppn'] = array_sum($tax)/100 * $data['total'];
+            $data['grand_total'] = $sales['amount'];
+
+            // Split sales details into chunks of 10 items each
+            $chunks = $salesDet->chunk(10);
+
+            $pdfPaths = [];
+            foreach ($chunks as $index => $chunk) {
+                $data['details'] = $chunk;
+
+                // Save HTML content to a file
+                $htmlContent = view('faktur', ['data' => $data])->render();
+                $htmlPath = public_path() . '/html/' . $sales['doc_number'] . time() . '-' . ($index + 1) . '.html';
+                file_put_contents($htmlPath, $htmlContent);
+
+                // Generate PDF from the saved HTML file
+                $pdfPath = public_path() . '/pdf/' . $sales['doc_number'] . time() . '-' . ($index + 1) . '.pdf';
+                $pdf = PDF::loadHTML($htmlContent)
+                    ->setPaper('a5', 'landscape'); // Set paper size to A5 and orientation to landscape
+                $pdf->save($pdfPath);
+
+                $pdfPaths[] = $pdfPath;
+            }
+
+            return response()->json([
+                "status"    => true,
+                "data"      => $pdfPaths
             ]);
         }
         else

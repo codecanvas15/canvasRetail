@@ -331,8 +331,18 @@ class ProcurementController extends Controller
         $sortOrder = $request->input('sort_order', 'desc');
         $search = $request->input('search', null);
         $searchVendor = $request->input('search_vendor', null);
-        $searchProcurementDate = $request->input('search_procurement_date', null);
         $searchDocNumber = $request->input('search_doc_number', null);
+
+        $startProcurementDate = $request->input('search_start_procurement_date', null);
+        $endProcurementDate = $request->input('search_end_procurement_date', null);
+
+        if ($startProcurementDate > $endProcurementDate) {
+            return response()->json([
+                "status" => false,
+                "message" => "The start date cannot be after the end date."
+            ], 400);
+        }
+
 
         if (!in_array($sortOrder, ['asc', 'desc'])) {
             $sortOrder = 'desc'; // Default to ascending if invalid
@@ -346,7 +356,6 @@ class ProcurementController extends Controller
         if ($search != null)
         {
             $query->where('contacts.name', 'like', '%' . $search . '%');
-            $query->orWhere('procurements.procurement_date', 'like', '%' . $search . '%');
             $query->orWhere('procurements.doc_number', 'like', '%' . $search . '%');
             $query->orWhere('procurements.external_doc_no', 'like', '%' . $search . '%');
         }
@@ -357,15 +366,23 @@ class ProcurementController extends Controller
                 $query->where('contacts.name', 'like', '%' . $searchVendor . '%');
             }
 
-            if ($searchProcurementDate != null)
-            {
-                $query->where('procurements.procurement_date', 'like', '%' . $searchProcurementDate . '%');
-            }
-
             if ($searchDocNumber != null)
             {
                 $query->where('procurements.doc_number', 'like', '%' . $searchDocNumber . '%');
                 $query->orWhere('procurements.external_doc_no', 'like', '%' . $searchDocNumber . '%');
+            }
+
+            if ($startProcurementDate != null && $endProcurementDate != null)
+            {
+                $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
+            }
+
+            if ($searchVendor == null && $searchDocNumber == null && $startProcurementDate == null && $endProcurementDate == null)
+            {
+                $startProcurementDate = (new DateTime($startProcurementDate))->modify('first day of this month')->format('Y-m-d');
+                $date = new DateTime('now');
+                $endProcurementDate = $date->format('Y-m-d');
+                $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
             }
         }
 
@@ -557,6 +574,11 @@ class ProcurementController extends Controller
                 "message" => "Procurement not found"
             ], 404);
         }
+    }
+
+    public function procurementReport(Request $request)
+    {
+        
     }
 
     public function createDocs(Request $request)

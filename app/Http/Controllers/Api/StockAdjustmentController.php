@@ -165,11 +165,57 @@ class StockAdjustmentController extends Controller
         $sortBy = $request->input('sort_by', 'transaction_date');
         $sortOrder = $request->input('sort_order', 'desc');
 
+        $search = $request->input('search', null);
+        $reason = $request->input('search_reason', null);
+        $searchDocNumber = $request->input('search_doc_number', null);
+
+        $startAdjDate = $request->input('search_start_adj_date', null);
+        $endAdjDate = $request->input('search_end_adj_date', null);
+
+        if ($startAdjDate > $endAdjDate) {
+            return response()->json([
+                "status" => false,
+                "message" => "The start date cannot be after the end date."
+            ], 400);
+        }
+
         if (!in_array($sortOrder, ['asc', 'desc'])) {
             $sortOrder = 'desc'; // Default to ascending if invalid
         }
 
         $query  = StockAdjustmentHeader::query();
+
+        if ($search != null)
+        {
+            $query->orWhere('stock_adjustment_header.doc_number', 'like', '%' . $searchDocNumber . '%');
+            $query->orWhere('stock_adjustment_header.reason', 'like', '%' . $reason . '%');
+        }
+        else
+        {
+            if ($searchDocNumber != null)
+            {
+                $query->where('stock_adjustment_header.doc_number', 'like', '%' . $searchDocNumber . '%');
+            }
+
+            if ($reason != null)
+            {
+                $query->where('stock_adjustment_header.reason', 'like', '%' . $reason . '%');
+            }
+
+            if ($startAdjDate != null && $endAdjDate != null)
+            {
+                $query->whereBetween('stock_adjustment_header.transaction_date', [$startAdjDate, $endAdjDate]);
+            }
+
+            if ($reason == null && $searchDocNumber == null && $startAdjDate == null && $endAdjDate == null)
+            {
+                $startAdjDate = (new DateTime($startAdjDate))->modify('first day of this month')->format('Y-m-d');
+                $date = new DateTime('now');
+                $endAdjDate = $date->format('Y-m-d');
+                $query->whereBetween('sales.sales_date', [$startAdjDate, $endAdjDate]);
+            }
+        }
+
         $stockAdjustment = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $stockAdjustment->appends([
             'sort_by' => $sortBy,

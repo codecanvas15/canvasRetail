@@ -161,11 +161,57 @@ class StockUsageController extends Controller
         $sortBy = $request->input('sort_by', 'transaction_date');
         $sortOrder = $request->input('sort_order', 'desc');
 
+        $search = $request->input('search', null);
+        $reason = $request->input('search_reason', null);
+        $searchDocNumber = $request->input('search_doc_number', null);
+
+        $startUsageDate = $request->input('search_start_usage_date', null);
+        $endUsageDate = $request->input('search_end_usage_date', null);
+
+        if ($startUsageDate > $endUsageDate) {
+            return response()->json([
+                "status" => false,
+                "message" => "The start date cannot be after the end date."
+            ], 400);
+        }
+
         if (!in_array($sortOrder, ['asc', 'desc'])) {
             $sortOrder = 'desc'; // Default to ascending if invalid
         }
 
         $query  = StockUsageHeader::query();
+
+        if ($search != null)
+        {
+            $query->orWhere('stock_usage_header.doc_number', 'like', '%' . $searchDocNumber . '%');
+            $query->orWhere('stock_usage_header.reason', 'like', '%' . $reason . '%');
+        }
+        else
+        {
+            if ($searchDocNumber != null)
+            {
+                $query->where('stock_usage_header.doc_number', 'like', '%' . $searchDocNumber . '%');
+            }
+
+            if ($reason != null)
+            {
+                $query->where('stock_usage_header.reason', 'like', '%' . $reason . '%');
+            }
+
+            if ($startUsageDate != null && $endUsageDate != null)
+            {
+                $query->whereBetween('stock_usage_header.transaction_date', [$startUsageDate, $endUsageDate]);
+            }
+
+            if ($reason == null && $searchDocNumber == null && $startUsageDate == null && $endUsageDate == null)
+            {
+                $startUsageDate = (new DateTime($startUsageDate))->modify('first day of this month')->format('Y-m-d');
+                $date = new DateTime('now');
+                $endUsageDate = $date->format('Y-m-d');
+                $query->whereBetween('sales.sales_date', [$startUsageDate, $endUsageDate]);
+            }
+        }
+
         $stockUsage = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
         $stockUsage->appends([
             'sort_by' => $sortBy,

@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Bank;
+use App\Contact;
 use App\Http\Controllers\Controller;
 use App\Payment;
 use App\Procurement;
 use App\Sales;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -240,5 +244,86 @@ class PaymentController extends Controller
                 'prev_page' => $payment->previousPageUrl(),
             ],
         ]);
+    }
+
+    public function payReceipt(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "sales_id"        => "required",
+            "bank_id"         => "required",
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $id = explode(',', $request->sales_id);
+
+        if(Sales::whereIn('id', $id)->where('status',1)->exists())
+        {
+            $sales = Sales::whereIn('id', $id)->where('status', 1)->first();
+            $bank = Bank::where('id', $request->bank_id)->first();
+
+            if ($bank == null)
+            {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Bank not found"
+                ], 404);
+            }
+
+            $contact = Contact::where('id', $sales->contact_id)->first();
+            $paymentDet = DB::table('payment')
+                ->join('sales', 'sales.id', '=', 'payment.sales_id')
+                ->select('sales.id', 'sales.doc_number', 'sales.sales_date', DB::raw('SUM(payment.amount) as amount'), DB::raw('sales.amount - SUM(payment.amount) as outstanding'))
+                ->whereIn('payment.sales_id', $id)
+                ->where('sales.status', 1)
+                ->groupBy('sales.id', 'sales.doc_number', 'sales.sales_date')
+                ->get();
+
+            $date = new DateTime('now');
+            $date = $date->format('d/m/Y');
+
+            $data = $sales;
+            $data['contact_name'] = $contact->name;
+            $data['contact_address'] = $contact->address;
+            $data['payments'] = $paymentDet;
+            $data['grand_total'] = $sales['amount'];
+            $data['date'] = $date;
+            $data['bank'] = $bank;
+
+            // Save HTML content to a file
+            $htmlContent = view('tandaTerima', ['data' => $data])->render();
+            $htmlPath = public_path() . '/html/payment-' . $sales['doc_number'] . time() . '.html';
+            file_put_contents($htmlPath, $htmlContent);
+
+            $path = public_path() . '/pdf/payment-' . $sales['doc_number'] . time() . '.pdf';
+
+            $pdf = PDF::loadView('tandaTerima', ['data' => $data])->setPaper('a5', 'landscape');;
+
+            $pdf->save($path);
+
+            return response()->json([
+                "status"    => true,
+                "data"      => $path
+            ]);
+        }
+        else
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Sales not found"
+            ], 404);
+        }
     }
 }
