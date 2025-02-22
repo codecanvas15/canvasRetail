@@ -313,9 +313,11 @@ class PaymentController extends Controller
 
             $pdf->save($path);
 
+            $pdfPaths = url('/pdf/' . basename($path));
+
             return response()->json([
                 "status"    => true,
-                "data"      => $path
+                "data"      => $pdfPaths
             ]);
         }
         else

@@ -654,7 +654,7 @@ class SalesController extends Controller
                     ->setPaper('a5', 'landscape'); // Set paper size to A5 and orientation to landscape
                 $pdf->save($pdfPath);
 
-                $pdfPaths[] = $pdfPath;
+                $pdfPaths[] = url('/pdf/' . basename($pdfPath));
             }
 
             return response()->json([
