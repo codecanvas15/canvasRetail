@@ -397,7 +397,7 @@ class SalesController extends Controller
 
             if ($searchPaymentStatus != null)
             {
-                $query->where('sales.pay_status', 'like', '%' . $searchPaymentStatus . '%');
+                $query->where('sales.pay_status', 'like',  $searchPaymentStatus);
             }
 
             if ($searchVendor == null && $searchDocNumber == null && $startSalesDate == null && $endSalesDate == null)
