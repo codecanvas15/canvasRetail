@@ -272,10 +272,13 @@ class SalesController extends Controller
 
             DB::commit();
 
+            $faktur = $this->generateFaktur($sales->id);
+
             return response()->json([
                 "status" => true,
                 "message" => "Sales Success",
-                "sales_id" => $sales->id
+                "sales_id" => $sales->id,
+                "faktur" => $faktur
             ]);
         }
         catch (\Throwable $th)
@@ -332,11 +335,27 @@ class SalesController extends Controller
         $sortBy = $request->input('sort_by', 'sales_date');
         $sortOrder = $request->input('sort_order', 'desc');
         $search = $request->input('search', null);
-        $searchVendor = $request->input('search_vendor', null);
+        $searchVendor = $request->input('search_customer', null);
         $searchDocNumber = $request->input('search_doc_number', null);
+        $searchPaymentStatus = $request->input('search_payment_status', null);
 
         $startSalesDate = $request->input('search_start_sales_date', null);
         $endSalesDate = $request->input('search_end_sales_date', null);
+
+        if ($startSalesDate != null && $endSalesDate == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "The end date cannot be empty."
+            ], 400);
+        }
+        else if ($startSalesDate == null && $endSalesDate != null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "The start date cannot be empty."
+            ], 400);
+        }
 
         if ($startSalesDate > $endSalesDate) {
             return response()->json([
@@ -358,6 +377,7 @@ class SalesController extends Controller
         {
             $query->where('contacts.name', 'like', '%' . $search . '%');
             $query->orWhere('sales.doc_number', 'like', '%' . $search . '%');
+            $query->orWhere('sales.pay_status', 'like', '%' . $search . '%');
         }
         else
         {
@@ -373,6 +393,11 @@ class SalesController extends Controller
             if ($startSalesDate != null && $endSalesDate != null)
             {
                 $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
+            }
+
+            if ($searchPaymentStatus != null)
+            {
+                $query->where('sales.pay_status', 'like', '%' . $searchPaymentStatus . '%');
             }
 
             if ($searchVendor == null && $searchDocNumber == null && $startSalesDate == null && $endSalesDate == null)
@@ -657,6 +682,65 @@ class SalesController extends Controller
                 "status"    => true,
                 "data"      => $pdfPaths
             ]);
+        }
+        else
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Sales not found"
+            ], 404);
+        }
+    }
+
+    public function generateFaktur($id)
+    {
+        if(Sales::where('id', $id)->where('status',1)->exists())
+        {
+            $sales = Sales::where('id', $id)->where('status', 1)->first();
+
+            $contact = Contact::where('id', $sales->contact_id)->first();
+
+            $salesDet = DB::table('sales_details')
+                            ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
+                            ->join('items', 'items_details.item_code', '=', 'items.item_code')
+                            ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                            ->where('sales_details.sales_id', $id)
+                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.item_code as item_code', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->get();
+
+            $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();
+
+            $location = Location::where('id', $sales->location_id)->first();
+
+            $data = $sales;
+            $data['contact_name'] = $contact->name;
+            $data['contact_address'] = $contact->address;
+            $data['location_name'] = $location->name;
+            $data['details'] = $salesDet;
+            $data['payments'] = $paymentDet;
+            $data['total'] = $salesDet->sum('total');
+            $tax = explode('|', $sales->tax);
+            $data['ppn'] = array_sum($tax)/100 * $data['total'];
+            $data['grand_total'] = $sales['amount'];
+
+            // Split sales details into chunks of 10 items each
+            $chunks = $salesDet->chunk(10);
+
+            $pdfPaths = [];
+            $data['details'] = $chunks;
+            $htmlContent = view('faktur', ['data' => $data])->render();
+            $htmlPath = public_path() . '/html/' . $sales['doc_number'] . time() . '.html';
+            file_put_contents($htmlPath, $htmlContent);
+
+            // Generate PDF from the saved HTML file
+            $pdfPath = public_path() . '/pdf/' . $sales['doc_number'] . time() . '.pdf';
+            $pdf = PDF::loadHTML($htmlContent)
+                ->setPaper('a5', 'landscape'); // Set paper size to A5 and orientation to landscape
+            $pdf->save($pdfPath);
+
+            $pdfPaths = url('/pdf/' . basename($pdfPath));
+
+            return $pdfPaths;
         }
         else
         {
