@@ -348,7 +348,7 @@ class SalesController extends Controller
         $sortBy = $request->input('sort_by', 'sales_date');
         $sortOrder = $request->input('sort_order', 'desc');
         $search = $request->input('search', null);
-        $searchVendor = $request->input('search_customer', null);
+        $searchCustomer = $request->input('search_customer', null);
         $searchDocNumber = $request->input('search_doc_number', null);
         $searchPaymentStatus = $request->input('search_payment_status', null);
 
@@ -394,9 +394,9 @@ class SalesController extends Controller
         }
         else
         {
-            if ($searchVendor != null)
+            if ($searchCustomer != null)
             {
-                $query->where('contacts.name', 'like', '%' . $searchVendor . '%');
+                $query->where('contacts.id', $searchCustomer);
             }
             if ($searchDocNumber != null)
             {
