@@ -43,7 +43,8 @@ class ContactController extends Controller
             'behalf'        => $request->behalf ? $request->behalf : '',
             'created_by'    => auth()->user()->id,
             'updated_by'    => auth()->user()->id,
-            'status'        => 1
+            'status'        => 1,
+            'due_date'      => $request->due_date ?? 0
         ]);
 
         $description =  'New contact added' . chr(10) .
@@ -52,7 +53,8 @@ class ContactController extends Controller
                         'Address :' . $request->address . chr(10) .
                         'Phone : ' . $request->phone  . chr(10) .
                         'Email : ' . $request->email . chr(10) .
-                        'Behalf : ' . $request->behalf;
+                        'Behalf : ' . $request->behalf . chr(10) .
+                        'Due Date : ' . $request->due_date . ' days';
 
         $this->history('contacts', 'add contact', $description);
 
@@ -114,7 +116,8 @@ class ContactController extends Controller
                 'email'         => $request->email ? $request->email : $contact->email,
                 'behalf'        => $request->behalf ? $request->behalf : $contact->behalf,
                 'updated_at'    => date("Y-m-d H:i:s"),
-                'updated_by'    => auth()->user()->id
+                'updated_by'    => auth()->user()->id,
+                'due_date'      => $request->due_date ? $request->due_date : $contact->due_date
             ]);
 
             return response()->json([

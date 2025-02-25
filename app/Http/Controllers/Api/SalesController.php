@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Tymon\JWTAuth\Claims\Custom;
 
 class SalesController extends Controller
 {
@@ -116,6 +117,17 @@ class SalesController extends Controller
                 $totalTax[] = $key->value;
             }
 
+            $due = Contact::where('id', $request->contact_id)->select('due_date')->first();
+
+            // Convert $salesDate to DateTime object
+            $salesDateTime = new DateTime($salesDate);
+
+            // Add the number of days from $due->due_date
+            $salesDateTime->modify('+' . $due->due_date . ' days');
+
+            // Format the resulting date
+            $dueDate = $salesDateTime->format('Y-m-d H:i:s');
+
             // insert sales
             $sales = Sales::create([
                 'contact_id'    => $request->contact_id,
@@ -130,6 +142,7 @@ class SalesController extends Controller
                 'rounding'      => (float)($request->round),
                 'location_id'   => $request->location_id,
                 'reason'        => $request->notes ?? null,
+                'due_date'      => $dueDate,
             ]);
 
             $totalAmount = 0.00;

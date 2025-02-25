@@ -12,13 +12,21 @@
         .header-table td:nth-child(1) { width: 25%; }
         .header-table td:nth-child(2) { width: 50%; }
         .header-table td:nth-child(3) { width: 25%; }
-        .center { text-align: center; font-weight: bold; font-size: 22px; width: 40%}
+        .center { text-align: center; font-weight: bold; font-size: 15px; width: 40%}
         table {border-collapse: collapse; margin-top: 5px; }
         th, td { border: 1px solid black; text-align: left; }
         tbody td { border: none; }
+        .data-table td:nth-child(1) { width: 5%; }
+        .data-table td:nth-child(2) { width: 30%; }
+        .data-table td:nth-child(3) { width: 15%; }
+        .data-table td:nth-child(4) { width: 10%; }
+        .data-table td:nth-child(5) { width: 10%; }
+        .data-table td:nth-child(6) { width: 15%; }
+        .data-table td:nth-child(7) { width: 15%; }
         .footer { margin-top: -15px; text-align: right; width: 100%; border: none; }
         .footer td { border: none; padding: 0px !important;}
-        p { margin: 10px !important; }
+        p { margin: 5px !important; }
+        .page-break { page-break-after: always; }
     </style>
 </head>
 <body>
@@ -34,7 +42,7 @@
                         </tr>
                         <tr>
                             <td>Jatuh Tempo</td>
-                            <td>: {{ substr($data['sales_date'],0,10) }}</td>
+                            <td>: {{ substr($data['due_date'],0,10) }}</td>
                         </tr>
                         <tr>
                             <td>Lokasi</td>
@@ -43,6 +51,9 @@
                     </table>
                 </td>
                 <td class="center">
+                    <p>
+                        <b>PT. Purnama Jaya Teknik</b>
+                    </p>
                     <p>
                         <b><u>FAKTUR</u></b>
                     </p>
@@ -65,7 +76,7 @@
             </tr>
         </table>
         
-        <table style="width: 100%; min-height: 200px;">
+        <table class="data-table" style="width: 100%; min-height: 270px;">
             <thead>
                 <tr>
                     <th>No.</th>
@@ -151,6 +162,9 @@
             </tr>
         </table>        
     </div>
+    @if (!$loop->last)
+        <div class="page-break"></div>
+    @endif
     @endforeach
 </body>
 </html>

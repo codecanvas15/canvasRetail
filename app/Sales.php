@@ -24,5 +24,6 @@ class Sales extends XModel
         'tax',
         'location_id',
         'reason',
+        'due_date',
     ];
 }

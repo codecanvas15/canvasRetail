@@ -16,6 +16,7 @@ class Contact extends XModel
         'behalf',
         'created_by',
         'updated_by',
-        'status'
+        'status',
+        'due_date'
     ];
 }
