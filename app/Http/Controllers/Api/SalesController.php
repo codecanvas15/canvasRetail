@@ -413,7 +413,7 @@ class SalesController extends Controller
                 $query->where('sales.pay_status', 'like',  $searchPaymentStatus);
             }
 
-            if ($searchVendor == null && $searchDocNumber == null && $startSalesDate == null && $endSalesDate == null)
+            if ($searchCustomer == null && $searchDocNumber == null && $startSalesDate == null && $endSalesDate == null)
             {
                 $startSalesDate = (new DateTime($startSalesDate))->modify('first day of this month')->format('Y-m-d');
                 $date = new DateTime('now');
