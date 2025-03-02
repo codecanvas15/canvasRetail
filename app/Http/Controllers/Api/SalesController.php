@@ -11,6 +11,8 @@ use App\Payment;
 use App\Sales;
 use App\SalesDetail;
 use App\Tax;
+use App\VoidDetails;
+use App\VoidTransaction;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use DateTime;
 use Illuminate\Http\Request;
@@ -172,29 +174,6 @@ class SalesController extends Controller
                     $total = $item['qty'] * $itemPrice;
                 }
 
-                // insert and update item details
-                if ($itemDet == null)
-                {
-                    $itemDet = ItemDetail::create([
-                        'item_code'     => $item['item_code'],
-                        'location_id'   => $request->location_id,
-                        'qty'           => $item['qty'] * -1,
-                        'price'         => $item['price'],
-                        'created_by'    => auth()->user()->id,
-                        'updated_by'    => auth()->user()->id,
-                        'status'        => 1
-                    ]);
-                }
-                else
-                {
-                    $itemDet->update([
-                        'qty'           => $itemDet->qty - $item['qty'],
-                        'updated_by'    => auth()->user()->id,
-                        'updated_at'    => date("Y-m-d H:i:s"),
-                        'status'        => 1
-                    ]);
-                }
-
                 if ($request->include_tax)
                 {
                     $total = $item['qty'] * $itemPrice;
@@ -309,6 +288,292 @@ class SalesController extends Controller
     public function updateSales(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
+            "itemDetails"    => "array"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $sales = Sales::where('id', $request->sales_id)->where('status', 1)->first();
+        
+        if ($sales == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Sales not found"
+            ], 404);
+        }
+
+        $date = strtotime($request->sales_date ?? $sales->sales_date);
+        $salesDate = date('Y-m-d H:i:s',$date);
+
+        // document number
+        $date = new DateTime('now');
+        $date = $date->format('dmY');
+
+        $due = Contact::where('id', $request->contact_id)->select('due_date')->first();
+
+            // Convert $salesDate to DateTime object
+        $salesDateTime = new DateTime($salesDate);
+
+        // Add the number of days from $due->due_date
+        $salesDateTime->modify('+' . $due->due_date . ' days');
+
+        // Format the resulting date
+        $dueDate = $salesDateTime->format('Y-m-d H:i:s');
+
+        if ($request->tax_ids == null)
+        {
+            $taxes = explode('|', $sales->tax);
+            $tax = array_sum($taxes);
+
+            $totalTax = $sales->tax;
+        }
+        else
+        {
+            $taxes = explode(',', $request->tax_ids);
+
+            $tax = Tax::whereIn('id', $taxes)->sum('value');
+            $taxes = Tax::whereIn('id', $taxes)->get();
+            
+            $totalTax = [];
+            foreach ($taxes as $key)
+            {
+                $totalTax[] = $key->value;
+            }
+
+            $totalTax = implode('|', $totalTax);
+        }
+        
+        DB::beginTransaction();
+        try
+        {
+            $sales->update([
+                'contact_id'    => $request->contact_id ?? $sales->contact_id,
+                'sales_date'    => $salesDate,
+                'updated_by'    => auth()->user()->id,
+                'status'        => 1,
+                'bank_id'       => $request->bank_id ?? $sales->bank_id,
+                'rounding'      => (float)($request->round) ?? $sales->rounding,
+                'location_id'   => $request->location_id ?? $sales->location_id,
+                'reason'        => $request->notes ?? $sales->reason,
+                'due_date'      => $dueDate,
+                'tax'           => $totalTax
+            ]);
+            
+            $salesDet = SalesDetail::where('sales_id', $request->sales_id)->where('status', 1)->get();
+            $totalAmount = 0;
+            
+            if ($request->itemDetails != null)
+            {
+                foreach ($request->itemDetails as $item)
+                {
+                    $salesDet = DB::table('sales_details')
+                                    ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
+                                    ->where('items_details.item_code', $item['item_code'])
+                                    ->where('sales_details.status', 1)
+                                    ->where('items_details.status', 1)
+                                    ->select('sales_details.id as id', 'sales_details.item_detail_id as item_detail_id')
+                                    ->first();
+    
+                    if ($salesDet == null)
+                    {
+                        DB::rollBack();
+                        return response()->json([
+                            "status" => false,
+                            "message" => "Sales item not found"
+                        ], 404);
+                    }
+    
+                    if ($request->location_id != null)
+                    {
+                        $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
+                    }
+                    else
+                    {
+                        $itemDet = ItemDetail::where('id', $salesDet->item_detail_id)->where('status', 1)->first();
+                    }
+    
+                    if ($request->include_tax)
+                    {
+                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+                        
+                        $priceAfterDiscount = $item['price'] - $discount;
+    
+                        $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+    
+                        $total = $item['qty'] * $itemPrice;
+                    }
+                    else
+                    {
+                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+    
+                        $priceAfterDiscount = $item['price'] - $discount;
+    
+                        $itemPrice = $priceAfterDiscount;
+    
+                        $total = $item['qty'] * $itemPrice;
+                    }
+    
+                    if ($request->include_tax)
+                    {
+                        $total = $item['qty'] * $itemPrice;
+                    }
+                    else
+                    {
+                        $total = $item['qty'] * $item['price'];
+                    }
+    
+                    $salesDet = SalesDetail::where('id', $salesDet->id)->where('status', 1)->first();
+    
+                    $salesDet->update([
+                        'item_detail_id'    => $itemDet['id'],
+                        'qty'               => $item['qty'],
+                        'price'             => $itemPrice,
+                        'total'             => $total,
+                        'tax_ids'           => $request->tax_ids ?? $salesDet->tax_ids,
+                        'updated_by'        => auth()->user()->id,
+                        'status'            => 1,
+                        'discount'          => $discount,
+                        'initial_price'     => $item['price']
+                    ]);
+    
+                    $totalAmount += ($total + $total * ($tax/100));
+                }
+            }
+            else
+            {
+                if ($request->location_id != $sales->location_id)
+                {
+                    $salesDet = SalesDetail::where('sales_id', $sales->id)->where('status', 1)->get();
+    
+                    foreach ($salesDet as $item)
+                    {
+                        $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->select('item_code')->first();
+                        
+                        if ($itemDet == null)
+                        {
+                            DB::rollBack();
+                            return response()->json([
+                                "status" => false,
+                                "message" => "Item not found"
+                            ], 404);
+                        }
+    
+                        $itemDet = ItemDetail::where('item_code', $itemDet->item_code)->where('location_id', $request->location_id)->where('status', 1)->first();
+
+                        if ($itemDet == null)
+                        {
+                            $itemDet = ItemDetail::create([
+                                'item_code'     => $itemDet->item_code,
+                                'location_id'   => $request->location_id,
+                                'qty'           => 0,
+                                'price'         => 0,
+                                'created_by'    => auth()->user()->id,
+                                'updated_by'    => auth()->user()->id,
+                                'status'        => 1
+                            ]);
+                        }
+                        
+                        $item->update([
+                            'item_detail_id'    => $itemDet->id,
+                            'updated_by'        => auth()->user()->id,
+                            'updated_at'        => date("Y-m-d H:i:s")
+                        ]);
+                    }
+
+                    $salesDet->update([
+                        'location_id'   => $request->location_id,
+                        'updated_by'    => auth()->user()->id,
+                        'updated_at'    => date("Y-m-d H:i:s")
+                    ]);
+                }
+
+                $totalAmount = $procurement->amount;
+            }
+
+            $totalAmount += $request->round;
+
+            if ($request->rounding === 'down') 
+            {
+                $roundedAmount = floor($totalAmount);
+            } 
+            elseif ($request->rounding === 'up') 
+            {
+                $roundedAmount = ceil($totalAmount);
+            } 
+            else 
+            {
+                $roundedAmount = round($totalAmount);
+            }
+
+            $payment = Payment::where('sales_id', $sales->id)->where('status', 1)->where('pay_desc', 'Initial Payment')->where('type', 'IN')->first();
+        
+            $payment->update([
+                'amount'        => $request->pay_amount ?? $payment->amount,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+
+            $outstanding = $roundedAmount - $payment->amount;
+
+            $paymentStatus = '';
+            if ($outstanding > 0)
+            {
+                $paymentStatus = 'Partially Paid';
+            }
+            else if ($outstanding <= 0)
+            {
+                $paymentStatus = 'Paid';
+            }
+
+            if ($request->pay_amount == 0 && $outstanding == $roundedAmount)
+            {
+                $paymentStatus = 'Unpaid';
+            }
+
+            $sales->update([
+                'amount'        => $roundedAmount,
+                'pay_status'    => $paymentStatus,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+
+            DB::commit();
+
+            $faktur = $this->generateFaktur($sales->id);
+
+            return response()->json([
+                "status" => true,
+                "message" => "Sales Updated",
+                "sales_id" => $sales->id,
+                "faktur" => $faktur
+            ]);
+        }
+        catch (\Throwable $th)
+        {
+            DB::rollBack();
+            return response()->json([
+                "status" => false,
+                "message" => $th
+            ], 500);
+        }
+    }
+
+    public function approveSales(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
             "delivery_status"    => "required"
         ]);
 
@@ -319,27 +584,78 @@ class SalesController extends Controller
             ]);
         }
 
-        if(Sales::where('id', $id)->where('status', 1)->exists())
-        {
-            $sales = Sales::where('id', $id)->where('status', 1);
+        $sales = Sales::where('id', $id)->where('status', 1)->first();
 
-            $sales->update([
-                'delivery_status' => $request->delivery_status,
-                'updated_by'      => auth()->user()->id,
-                'updated_at'      => date("Y-m-d H:i:s")
-            ]);
-
-            return response()->json([
-                "status" => true,
-                "message" => "Sales Updated"
-            ]);
-        }
-        else
+        if ($sales == null)
         {
             return response()->json([
                 "status" => false,
-                "message" => "Sales not found"
+                "message" => "Sales not found or already approved"
             ], 404);
+        }
+
+        DB::beginTransaction();
+
+        try
+        {
+            if (!$request->is_approve)
+            {
+                $sales->update([
+                    'status'        => 3,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+    
+                DB::commit();
+    
+                return response()->json([
+                    "status" => true,
+                    "message" => "Sales Rejected"
+                ]);
+            }
+    
+            $sales->update([
+                'status'            => 2,
+                'delivery_status'   => $request->delivery_status ?? $sales->delivery_status,
+                'updated_by'        => auth()->user()->id,
+                'updated_at'        => date("Y-m-d H:i:s")
+            ]);
+    
+            foreach ($request->itemDetails as $item)
+            {
+                $salesDet = SalesDetail::where('id', $item['id'])->where('status', 1)->where('sales_id', $id)->first();
+    
+                if ($salesDet == null)
+                {
+                    DB::rollBack();
+                    return response()->json([
+                        "status" => false,
+                        "message" => "Item not found"
+                    ], 404);
+                }
+    
+                $salesDet->update([
+                    'qty'           => $item['qty'] ?? $salesDet->qty,
+                    'price'         => $item['price'] ?? $salesDet->price,
+                    'total'         => $item['total'] ?? $salesDet->total,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+            }
+    
+            DB::commit();
+            return response()->json([
+                "status" => true,
+                "message" => "Sales Approved"
+            ]);
+        }
+        catch (\Throwable $th)
+        {
+            DB::rollBack();
+            return response()->json([
+                "status" => false,
+                "message" => $th
+            ], 500);
         }
     }
 
@@ -645,9 +961,9 @@ class SalesController extends Controller
 
         $id = $request->sales_id;
 
-        if(Sales::where('id', $id)->where('status',1)->exists())
+        if(Sales::where('id', $id)->whereIn('status', [1,2,3])->exists())
         {
-            $sales = Sales::where('id', $id)->where('status', 1)->first();
+            $sales = Sales::where('id', $id)->whereIn('status', [1,2,3])->first();
 
             $contact = Contact::where('id', $sales->contact_id)->first();
 
@@ -707,9 +1023,9 @@ class SalesController extends Controller
 
     public function generateFaktur($id)
     {
-        if(Sales::where('id', $id)->where('status',1)->exists())
+        if(Sales::where('id', $id)->whereIn('status', [1,2,3])->exists())
         {
-            $sales = Sales::where('id', $id)->where('status', 1)->first();
+            $sales = Sales::where('id', $id)->whereIn('status', [1,2,3])->first();
 
             $contact = Contact::where('id', $sales->contact_id)->first();
 
@@ -761,6 +1077,102 @@ class SalesController extends Controller
                 "status" => false,
                 "message" => "Sales not found"
             ], 404);
+        }
+    }
+
+    public function void(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "sales_id"    => "required"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $sales = Sales::where('id', $request->sales_id)->where('status', 2)->first();
+
+        if ($sales == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Sales not found"
+            ], 404);
+        }
+
+        DB::beginTransaction();
+        try
+        {
+            $sales->update([
+                'status'        => 4,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+
+            $void = VoidTransaction::create([
+                'ref_id'            => $sales->doc_number,
+                'sales_id'          => $request->sales_id,
+                'reason'            => $request->reason,
+                'status'            => 1,
+                'updated_by'        => auth()->user()->id,
+                'updated_at'        => date("Y-m-d H:i:s")
+            ]);
+
+            $salesDet = SalesDetail::where('procurement_id', $request->procurement_id)->where('status', 1)->get();
+
+            foreach ($salesDet as $item)
+            {
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+
+                if ($itemDet == null)
+                {
+                    DB::rollBack();
+                    return response()->json([
+                        "status" => false,
+                        "message" => "Item not found"
+                    ], 404);
+                }
+
+                $itemDet->update([
+                    'qty'           => $itemDet->qty - $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s"),
+                ]);
+
+                $voidDetail = VoidDetails::create([
+                    'void_id'       => $void->id,
+                    'item_detail_id'=> $item->item_detail_id,
+                    'qty'           => $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                "status" => true,
+                "message" => "Sales Voided"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
         }
     }
 }

@@ -62,13 +62,13 @@ class PaymentController extends Controller
 
             if ($type == 'IN')
             {
-                $sales = Sales::where('id', $request->sales_id)->where('status', 1)->first();
+                $sales = Sales::where('id', $request->sales_id)->where('status', 2)->first();
 
                 if ($sales == null)
                 {
                     return response()->json([
                         "status" => false,
-                        "message" => "Sales not found"
+                        "message" => "Sales not found or not approved yet."
                     ], 404);
                 }
 
@@ -136,13 +136,13 @@ class PaymentController extends Controller
             }
             else if ($type == 'OUT')
             {
-                $procurement = Procurement::where('id', $request->procurement_id)->where('status', 1)->first();
+                $procurement = Procurement::where('id', $request->procurement_id)->where('status', 2)->first();
 
                 if ($procurement == null)
                 {
                     return response()->json([
                         "status" => false,
-                        "message" => "Procurement not found"
+                        "message" => "Procurement not found or not approved yet."
                     ], 404);
                 }
 

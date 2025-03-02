@@ -11,6 +11,8 @@ use App\Payment;
 use App\Procurement;
 use App\ProcurementDetail;
 use App\Tax;
+use App\VoidDetails;
+use App\VoidTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
@@ -175,22 +177,22 @@ class ProcurementController extends Controller
                     $itemDet = ItemDetail::create([
                         'item_code'     => $item['item_code'],
                         'location_id'   => $request->location_id,
-                        'qty'           => $item['qty'],
-                        'price'         => $itemPrice,
+                        'qty'           => 0,
+                        'price'         => 0,
                         'created_by'    => auth()->user()->id,
                         'updated_by'    => auth()->user()->id,
                         'status'        => 1
                     ]);
                 }
-                else
-                {
-                    $itemDet->update([
-                        'qty'           => $item['qty'] + $itemDet->qty,
-                        'updated_by'    => auth()->user()->id,
-                        'updated_at'    => date("Y-m-d H:i:s"),
-                        'status'        => 1
-                    ]);
-                }
+                // else
+                // {
+                //     $itemDet->update([
+                //         'qty'           => $item['qty'] + $itemDet->qty,
+                //         'updated_by'    => auth()->user()->id,
+                //         'updated_at'    => date("Y-m-d H:i:s"),
+                //         'status'        => 1
+                //     ]);
+                // }
 
                 // insert to procurement detail
                 ProcurementDetail::create([
@@ -288,40 +290,460 @@ class ProcurementController extends Controller
         }
     }
 
-    public function updateProcurement(Request $request, $id)
+    public function approveProcurement(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "delivery_status"    => "required"
+            "procurement_id"    => "required",
+            "is_approve"        => "required|boolean",
         ]);
 
         if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
             return response()->json([
                 "status" => false,
-                "message" => $validator->errors()
-            ]);
+                "message" => $errorMsg
+            ], 400);
         }
-
-        if(Procurement::where('id', $id)->where('status', 1)->exists())
-        {
-            $procurement = Procurement::where('id', $id)->where('status', 1);
-
-            $procurement->update([
-                'delivery_status' => $request->delivery_status,
-                'updated_by'      => auth()->user()->id,
-                'updated_at'      => date("Y-m-d H:i:s")
-            ]);
-
-            return response()->json([
-                "status" => true,
-                "message" => "Procurement Updated"
-            ]);
-        }
-        else
+        
+        $procurement = Procurement::where('id', $request->procurement_id)->where('status', 1)->first();
+        
+        if ($procurement == null)
         {
             return response()->json([
                 "status" => false,
                 "message" => "Procurement not found"
             ], 404);
+        }
+
+        DB::beginTransaction();
+        try
+        {
+            if (!$request->is_approve)
+            {
+                $procurement->update([
+                    'status'        => 3,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+    
+                DB::commit();
+    
+                return response()->json([
+                    "status" => true,
+                    "message" => "Procurement Rejected"
+                ]);
+            }
+    
+            $procurement->update([
+                'status'        => 2,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+            
+            $procurementDet = ProcurementDetail::where('procurement_id', $request->procurement_id)->where('status', 1)->get();
+    
+            foreach ($procurementDet as $item)
+            {
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+                
+                if ($itemDet == null)
+                {
+                    $itemDet = ItemDetail::create([
+                        'item_code'     => $item['item_code'],
+                        'location_id'   => $request->location_id,
+                        'qty'           => $item['qty'],
+                        'price'         => $item['price'],
+                        'created_by'    => auth()->user()->id,
+                        'updated_by'    => auth()->user()->id,
+                        'status'        => 1
+                    ]);
+                }
+                else
+                {
+                    $itemDet->update([
+                        'qty'           => $itemDet->qty + $item->qty,
+                        'updated_by'    => auth()->user()->id,
+                        'updated_at'    => date("Y-m-d H:i:s"),
+                    ]);
+                }
+            }
+    
+            DB::commit();
+    
+            return response()->json([
+                "status" => true,
+                "message" => "Procurement Approved"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
+        }
+    }
+
+    public function updateProcurement(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'itemDetails'                 => 'array',
+        ]);
+        
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+        
+        if(Procurement::where('id', $id)->whereIn('status', [1,3])->exists())
+        {
+            $procurement = Procurement::where('id', $id)->whereIn('status', [1,3])->first();
+            $date = strtotime($request->procurement_date ?? $procurement->procurement_date);
+
+            $procurementDate = date('Y-m-d H:i:s',$date);
+
+            $taxes = explode(',', $request->tax_ids);
+
+            $tax = Tax::whereIn('id', $taxes)->sum('value');
+            $taxes = Tax::whereIn('id', $taxes)->get();
+
+            $totalTax = [];
+            foreach ($taxes as $key)
+            {
+                $totalTax[] = $key->value;
+            }
+
+            $totalAmount = 0;
+            
+            DB::beginTransaction();
+            try
+            {
+                $procurement->update([
+                    'contact_id'            => $request->contact_id ?? $procurement->contact_id,
+                    'procurement_date'      => $procurementDate,
+                    'status'                => 1,
+                    'include_tax'           => $request->include_tax == 1 ? true : false,
+                    'rounding'              => (float)($request->round ?? $procurement->rounding),
+                    'external_doc_no'       => $request->external_doc_no ?? $procurement->external_doc_no,
+                    'delivery_status'       => $request->delivery_status ?? $procurement->delivery_status,
+                    'updated_by'            => auth()->user()->id,
+                    'updated_at'            => date("Y-m-d H:i:s"),
+                    'location_id'           => $request->location_id ?? $procurement->location_id,
+                ]);
+    
+                if ($request->itemDetails != null)
+                {
+                    foreach ($request->itemDetails as $item)
+                    {
+                        $procurementDet = DB::table('procurement_details')
+                                        ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
+                                        ->where('items_details.item_code', $item['item_code'])
+                                        ->where('procurement_details.status', 1)
+                                        ->where('items_details.status', 1)
+                                        ->select('procurement_details.id as id', 'procurement_details.item_detail_id as item_detail_id')
+                                        ->first();
+        
+                        if ($procurementDet == null)
+                        {
+                            DB::rollBack();
+                            return response()->json([
+                                "status" => false,
+                                "message" => "Procurement item not found"
+                            ], 404);
+                        }
+        
+                        if ($request->location_id != null)
+                        {
+                            $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
+                        }
+                        else
+                        {
+                            $itemDet = ItemDetail::where('id', $procurementDet->item_detail_id)->where('status', 1)->first();
+                        }
+    
+                        $procurementDet = ProcurementDetail::where('id', $procurementDet->id)->where('status', 1)->first();
+        
+                        $discounts = $item['discounts'] ?? explode('|', $procurementDet->discount);
+        
+                        if ($request->include_tax)
+                        {
+                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
+                            foreach ($discounts as $discount)
+                            {
+                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
+                                
+                                $priceAfterDiscount = $priceAfterDiscount - $discount;
+                            }
+        
+                            $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+                            
+                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
+                        }
+                        else
+                        {
+                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
+                            foreach ($discounts as $discount)
+                            {
+                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
+                                
+                                $priceAfterDiscount = $priceAfterDiscount - $discount;
+                            }
+        
+                            $itemPrice = $priceAfterDiscount;
+        
+                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
+                        }
+        
+                        $procurementDet->update([
+                            'item_detail_id'    => $itemDet['id'],
+                            'qty'               => $item['qty'] ?? $procurementDet->qty,
+                            'price'             => $itemPrice ?? $procurementDet->price,
+                            'total'             => round($total, 2) ?? $procurementDet->total,
+                            'tax_ids'           => $request->tax_ids ?? $procurementDet->tax_ids,
+                            'updated_by'        => auth()->user()->id,
+                            'updated_at'        => date("Y-m-d H:i:s"),
+                            'discount'          => implode('|', $discounts) ?? $procurementDet->discount,
+                            'initial_price'     => $item['price'] ?? $procurementDet->initial_price
+                        ]);
+                        
+                        $totalAmount += ($total + $total * ($tax/100));
+                    }
+                }
+                else
+                {
+                    if ($request->location_id != $procurement->location_id)
+                    {
+                        $procurementDet = ProcurementDetail::where('procurement_id', $procurement->id)->where('status', 1)->get();
+        
+                        foreach ($procurementDet as $item)
+                        {
+                            $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->select('item_code')->first();
+                            
+                            if ($itemDet == null)
+                            {
+                                DB::rollBack();
+                                return response()->json([
+                                    "status" => false,
+                                    "message" => "Item not found"
+                                ], 404);
+                            }
+        
+                            $itemDet = ItemDetail::where('item_code', $itemDet->item_code)->where('location_id', $request->location_id)->where('status', 1)->first();
+
+                            if ($itemDet == null)
+                            {
+                                $itemDet = ItemDetail::create([
+                                    'item_code'     => $itemDet->item_code,
+                                    'location_id'   => $request->location_id,
+                                    'qty'           => 0,
+                                    'price'         => 0,
+                                    'created_by'    => auth()->user()->id,
+                                    'updated_by'    => auth()->user()->id,
+                                    'status'        => 1
+                                ]);
+                            }
+                            
+                            $item->update([
+                                'item_detail_id'    => $itemDet->id,
+                                'updated_by'        => auth()->user()->id,
+                                'updated_at'        => date("Y-m-d H:i:s")
+                            ]);
+                        }
+
+                        $procurementDet->update([
+                            'location_id'   => $request->location_id,
+                            'updated_by'    => auth()->user()->id,
+                            'updated_at'    => date("Y-m-d H:i:s")
+                        ]);
+                    }
+
+                    $totalAmount = $procurement->amount; 
+                }
+
+                $totalAmount += $request->round ?? $procurement->rounding;
+    
+                if ($request->rounding === 'down') 
+                {
+                    $roundedAmount = floor($totalAmount);
+                } 
+                elseif ($request->rounding === 'up') 
+                {
+                    $roundedAmount = ceil($totalAmount);
+                } 
+                else 
+                {
+                    $roundedAmount = round($totalAmount,2);
+                }
+    
+                $payment = Payment::where('procurement_id', $procurement->id)->where('status', 1)->where('pay_desc', 'Initial Payment')->where('type', 'OUT')->first();
+    
+                $payment->update([
+                    'amount'        => $request->pay_amount ?? $payment->amount,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+    
+                $outstanding = $roundedAmount - $payment->amount;
+    
+                $paymentStatus = '';
+                if ($outstanding > 0)
+                {
+                    $paymentStatus = 'Partially Paid';
+                }
+                else if ($outstanding <= 0)
+                {
+                    $paymentStatus = 'Paid';
+                }
+    
+                if ($request->pay_amount == 0 && $outstanding == $roundedAmount)
+                {
+                    $paymentStatus = 'Unpaid';
+                }
+                
+                $procurement->update([
+                    'amount'        => $roundedAmount,
+                    'pay_status'    => $paymentStatus,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s"),
+                    'tax'           => implode('|', $totalTax)
+                ]);
+    
+                DB::commit();
+                return response()->json([
+                    "status" => true,
+                    "message" => "Procurement Updated"
+                ]);
+            }
+            catch (\Throwable $e)
+            {
+                dd($e);
+                DB::rollBack();
+    
+                return response()->json([
+                    "status" => false,
+                    "message" => $e
+                ], 500);
+            }
+        }
+        else
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Procurement not found or already approved"
+            ], 404);
+        }
+    }
+
+    public function void(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "procurement_id"    => "required"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $procurement = Procurement::where('id', $request->procurement_id)->where('status', 2)->first();
+
+        if ($procurement == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Procurement not found"
+            ], 404);
+        }
+
+        DB::beginTransaction();
+        try
+        {
+            $procurement->update([
+                'status'        => 4,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+
+            $void = VoidTransaction::create([
+                'ref_id'            => $procurement->doc_number,
+                'procurement_id'    => $request->procurement_id,
+                'reason'            => $request->reason,
+                'status'            => 1,
+                'updated_by'        => auth()->user()->id,
+                'updated_at'        => date("Y-m-d H:i:s")
+            ]);
+
+            $procurementDet = ProcurementDetail::where('procurement_id', $request->procurement_id)->where('status', 1)->get();
+
+            foreach ($procurementDet as $item)
+            {
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+
+                if ($itemDet == null)
+                {
+                    DB::rollBack();
+                    return response()->json([
+                        "status" => false,
+                        "message" => "Item not found"
+                    ], 404);
+                }
+
+                $itemDet->update([
+                    'qty'           => $itemDet->qty - $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s"),
+                ]);
+
+                $voidDetail = VoidDetails::create([
+                    'void_id'       => $void->id,
+                    'item_detail_id'=> $item->item_detail_id,
+                    'qty'           => $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                "status" => true,
+                "message" => "Procurement Voided"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
         }
     }
 

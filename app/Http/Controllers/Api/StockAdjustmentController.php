@@ -8,6 +8,8 @@ use App\ItemDetail;
 use App\Location;
 use App\StockAdjustment;
 use App\StockAdjustmentHeader;
+use App\VoidDetails;
+use App\VoidTransaction;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -98,37 +100,37 @@ class StockAdjustmentController extends Controller
                     $itemDet = ItemDetail::where('item_code', $item['code'])->where('location_id', $item['location_id'])->where('status', 1)->first();
 
                     // insert to item detail
-                    if ($itemDet != null)
+                    // if ($itemDet != null)
+                    // {
+                    //     $itemDet->update([
+                    //         'qty'           => $itemDet->qty + $item['qty'],
+                    //         'updated_by'    => auth()->user()->id,
+                    //         'updated_at'    => date("Y-m-d H:i:s"),
+                    //         'status'        => 1
+                    //     ]);
+                    // }
+                    if ($itemDet == null)
                     {
-                        $itemDet->update([
-                            'qty'           => $itemDet->qty + $item['qty'],
-                            'updated_by'    => auth()->user()->id,
-                            'updated_at'    => date("Y-m-d H:i:s"),
-                            'status'        => 1
-                        ]);
-
-                        StockAdjustment::create([
-                            'stock_adjustment_id'   => $header->id,
-                            'item_detail_id'        => $itemDet->id,
-                            'qty'                   => $item['qty'],
-                            'created_by'            => auth()->user()->id,
-                            'updated_by'            => auth()->user()->id,
-                            'status'                => 1
-                        ]);
-                    }
-                    else
-                    {
-
                         $itemDet = ItemDetail::create([
                             'item_code'     => $item['item_code'],
                             'location_id'   => $item['location_id'],
-                            'qty'           => $item['qty'],
+                            'qty'           => null,
                             'price'         => null,
                             'created_by'    => auth()->user()->id,
                             'updated_by'    => auth()->user()->id,
                             'status'        => 1
                         ]);
                     }
+
+                    StockAdjustment::create([
+                        'stock_adjustment_id'   => $header->id,
+                        'item_detail_id'        => $itemDet->id,
+                        'location_id'           => $item['location_id'],
+                        'qty'                   => $item['qty'],
+                        'created_by'            => auth()->user()->id,
+                        'updated_by'            => auth()->user()->id,
+                        'status'                => 1
+                    ]);
                 }
             }
 
@@ -147,6 +149,108 @@ class StockAdjustmentController extends Controller
             return response()->json([
                 "status" => true,
                 "message" => "Stock Adjustment Success"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
+        }
+    }
+
+    public function approveAdjustment(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "adjustment_id"    => "required",
+            "is_approve"       => "required|boolean"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $stockAdj = StockAdjustmentHeader::where('id', $request->adjustment_id)->where('status', 1)->first();
+        
+        if ($stockAdj == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Adjustment not found"
+            ], 404);
+        }
+        
+        DB::beginTransaction();
+        try
+        {
+            if (!$request->is_approve)
+            {
+                $stockAdj->update([
+                    'status'        => 3,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+    
+                DB::commit();
+    
+                return response()->json([
+                    "status" => true,
+                    "message" => "Stock Adjustment Rejected"
+                ]);
+            }
+
+            $stockAdj->update([
+                'status'        => 2,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+            
+            $adjDeteail = StockAdjustment::where('stock_adjustment_id', $request->adjustment_id)->where('status', 1)->get();
+    
+            foreach ($adjDeteail as $item)
+            {
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+                
+                if ($itemDet == null)
+                {
+                    $itemDet = ItemDetail::create([
+                        'item_code'     => $item['item_code'],
+                        'location_id'   => $request->location_id,
+                        'qty'           => $item['qty'],
+                        'price'         => $item['price'],
+                        'created_by'    => auth()->user()->id,
+                        'updated_by'    => auth()->user()->id,
+                        'status'        => 1
+                    ]);
+                }
+                else
+                {
+                    $itemDet->update([
+                        'qty'           => $itemDet->qty + $item->qty,
+                        'updated_by'    => auth()->user()->id,
+                        'updated_at'    => date("Y-m-d H:i:s"),
+                    ]);
+                }
+            }
+    
+            DB::commit();
+    
+            return response()->json([
+                "status" => true,
+                "message" => "Stock Adjustment Approved"
             ]);
         }
         catch (\Throwable $e)
@@ -212,7 +316,7 @@ class StockAdjustmentController extends Controller
                 $startAdjDate = (new DateTime($startAdjDate))->modify('first day of this month')->format('Y-m-d');
                 $date = new DateTime('now');
                 $endAdjDate = $date->format('Y-m-d');
-                $query->whereBetween('sales.sales_date', [$startAdjDate, $endAdjDate]);
+                $query->whereBetween('stock_adjustment_header.transaction_date', [$startAdjDate, $endAdjDate]);
             }
         }
 
@@ -281,33 +385,243 @@ class StockAdjustmentController extends Controller
         try
         {
             $stockAdjustment->update([
-                'status' => 2
+                'status' => 3,
+                'updated_by' => auth()->user()->id,
+                'updated_at' => date("Y-m-d H:i:s")
             ]);
             
-            $itemDet = ItemDetail::where('id', $stockAdjustment->item_detail_id)->where('status', 1)->first();
+            // $itemDet = ItemDetail::where('id', $stockAdjustment->item_detail_id)->where('status', 1)->first();
 
-            if ($itemDet == null)
-            {
-                DB::rollBack();
+            // if ($itemDet == null)
+            // {
+            //     DB::rollBack();
 
-                return response()->json([
-                    "status" => false,
-                    "message" => "Item not found or already deleted !"
-                ], 404);
-            }
+            //     return response()->json([
+            //         "status" => false,
+            //         "message" => "Item not found or already deleted !"
+            //     ], 404);
+            // }
             
-            $itemDet->update([
-                'qty'           => $itemDet->qty - $stockAdjustment->qty,
-                'updated_by'    => auth()->user()->id,
-                'updated_at'    => date("Y-m-d H:i:s"),
-                'status'        => 1
-            ]);
+            // $itemDet->update([
+            //     'qty'           => $itemDet->qty - $stockAdjustment->qty,
+            //     'updated_by'    => auth()->user()->id,
+            //     'updated_at'    => date("Y-m-d H:i:s"),
+            //     'status'        => 1
+            // ]);
             
             DB::commit();
 
             return response()->json([
                 "status" => true,
                 "message" => "Stock Adjustment Rejected"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
+        }
+    }
+
+    public function updateAdjustment(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            "items"    => "array"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        if (!StockAdjustmentHeader::where('id', $id)->where('status', 1)->exists())
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Adjustment not found"
+            ], 404);
+        }
+
+        $stockAdj = StockAdjustmentHeader::where('id', $id)->whereIn('status', [1, 3])->first();
+
+        if ($stockAdj == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Adjustment not found or already approved !"
+            ], 404);
+        }
+
+        $date = strtotime($request->transaction_date ?? $stockAdj->transaction_date);
+        $transactionDate = date('Y-m-d H:i:s',$date);
+
+        DB::beginTransaction();
+        try
+        {
+            $stockAdj->update([
+                'transaction_date'  => $transactionDate,
+                'reason'            => $request->reason ?? $stockAdj->reason,
+                'updated_by'        => auth()->user()->id,
+                'updated_at'        => date("Y-m-d H:i:s"),
+                'status'            => 1
+            ]);
+
+            if ($request->items != null)
+            {
+                foreach ($request->items as $item)
+                {
+                    $stockAdj = DB::table('stock_adjustment')
+                                ->join('items_details', 'stock_adjustment.item_detail_id', '=', 'items_details.id')
+                                ->where('stock_adjustment.stock_adjustment_id', $id)
+                                ->where('items_details.item_code', $item['code'])
+                                ->where('items_details.status', 1)
+                                ->where('stock_adjustment.status', 1)
+                                ->select('stock_adjustment.item_detail_id as item_detail_id', 'stock_adjustment.id as id')
+                                ->first();
+    
+                    if ($stockAdj == null)
+                    {
+                        DB::rollBack();
+                        return response()->json([
+                            "status" => false,
+                            "message" => "Stock Adjustment item not found"
+                        ], 404);
+                    }
+    
+                    if (isset($item['location_id']))
+                    {
+                        $itemDet = ItemDetail::where('item_code', $item['code'])->where('location_id', $item['location_id'])->where('status', 1)->first();
+                    }
+                    else
+                    {
+                        $itemDet = ItemDetail::where('id', $stockAdj->item_detail_id)->where('status', 1)->first();
+                    }
+    
+                    $stockAdj = StockAdjustment::where('id', $stockAdj->id)->where('status', 1)->first();
+    
+                    $stockAdj->update([
+                        'item_detail_id'        => $itemDet->id,
+                        'location_id'           => $item['location_id'],
+                        'qty'                   => $item['qty'],
+                        'created_by'            => auth()->user()->id,
+                        'updated_by'            => auth()->user()->id,
+                        'status'                => 1
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return response()->json([
+                "status" => true,
+                "message" => "Stock Adjustment Updated"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
+        }
+    }
+
+    public function void(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "adjustment_id"    => "required"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $adjustment = StockAdjustmentHeader::where('id', $request->adjustment_id)->where('status', 2)->first();
+
+        if ($adjustment == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Adjustment not found"
+            ], 404);
+        }
+
+        DB::beginTransaction();
+        try
+        {
+            $adjustment->update([
+                'status'        => 4,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+
+            $void = VoidTransaction::create([
+                'ref_id'            => $adjustment->doc_number,
+                'adjustment_id'    => $request->adjustment_id,
+                'reason'            => $request->reason,
+                'status'            => 1,
+                'updated_by'        => auth()->user()->id,
+                'updated_at'        => date("Y-m-d H:i:s")
+            ]);
+
+            $adjDet = StockAdjustment::where('stock_adjustment_id', $request->adjustment_id)->where('status', 1)->get();
+
+            foreach ($adjDet as $item)
+            {
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+
+                if ($itemDet == null)
+                {
+                    DB::rollBack();
+                    return response()->json([
+                        "status" => false,
+                        "message" => "Item not found"
+                    ], 404);
+                }
+
+                $itemDet->update([
+                    'qty'           => $itemDet->qty - $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s"),
+                ]);
+
+                $voidDetail = VoidDetails::create([
+                    'void_id'       => $void->id,
+                    'item_detail_id'=> $item->item_detail_id,
+                    'qty'           => $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                "status" => true,
+                "message" => "Stock Adjustment Voided"
             ]);
         }
         catch (\Throwable $e)

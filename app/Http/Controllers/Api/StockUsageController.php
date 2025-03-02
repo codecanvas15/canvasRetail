@@ -8,6 +8,8 @@ use App\ItemDetail;
 use App\Location;
 use App\StockUsage;
 use App\StockUsageHeader;
+use App\VoidDetails;
+use App\VoidTransaction;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,12 +104,12 @@ class StockUsageController extends Controller
                     // insert to item detail
                     if ($itemDet != null)
                     {
-                        $itemDet->update([
-                            'qty'           => $itemDet->qty - $item['qty'],
-                            'updated_by'    => auth()->user()->id,
-                            'updated_at'    => date("Y-m-d H:i:s"),
-                            'status'        => 1
-                        ]);
+                        // $itemDet->update([
+                        //     'qty'           => $itemDet->qty - $item['qty'],
+                        //     'updated_by'    => auth()->user()->id,
+                        //     'updated_at'    => date("Y-m-d H:i:s"),
+                        //     'status'        => 1
+                        // ]);
 
                         StockUsage::create([
                             'stock_usage_id'        => $header->id,
@@ -149,6 +151,109 @@ class StockUsageController extends Controller
         {
             DB::rollBack();  
 
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
+        }
+    }
+
+    public function approveUsage(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "usage_id"    => "required",
+            "is_approve"  => "required|boolean",
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $stockUsage = StockUsageHeader::where('id', $request->usage_id)->where('status', 1)->first();
+        
+        if ($stockUsage == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Usage not found"
+            ], 404);
+        }
+        
+        DB::beginTransaction();
+
+        try
+        {
+            if (!$request->is_approve)
+            {
+                $stockUsage->update([
+                    'status'        => 3,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+    
+                DB::commit();
+    
+                return response()->json([
+                    "status" => true,
+                    "message" => "Stock Usage Rejected"
+                ]);
+            }
+
+            $stockUsage->update([
+                'status'        => 2,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+            
+            $usageDetail = StockUsage::where('stock_usage_id', $request->usage_id)->where('status', 1)->get();
+    
+            foreach ($usageDetail as $item)
+            {
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+                
+                if ($itemDet == null)
+                {
+                    $itemDet = ItemDetail::create([
+                        'item_code'     => $item['item_code'],
+                        'location_id'   => $request->location_id,
+                        'qty'           => $item['qty'],
+                        'price'         => $item['price'],
+                        'created_by'    => auth()->user()->id,
+                        'updated_by'    => auth()->user()->id,
+                        'status'        => 1
+                    ]);
+                }
+                else
+                {
+                    $itemDet->update([
+                        'qty'           => $itemDet->qty - $item->qty,
+                        'updated_by'    => auth()->user()->id,
+                        'updated_at'    => date("Y-m-d H:i:s"),
+                    ]);
+                }
+            }
+    
+            DB::commit();
+    
+            return response()->json([
+                "status" => true,
+                "message" => "Stock Usage Approved"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+    
             return response()->json([
                 "status" => false,
                 "message" => $e
@@ -277,26 +382,9 @@ class StockUsageController extends Controller
         try
         {
             $stockUsage->update([
-                'status' => 2
-            ]);
-            
-            $itemDet = ItemDetail::where('id', $stockUsage->item_detail_id)->where('status', 1)->first();
-            
-            if ($itemDet == null)
-            {
-                DB::rollBack();
-
-                return response()->json([
-                    "status" => false,
-                    "message" => "Item not found or already deleted !"
-                ], 404);
-            }
-
-            $itemDet->update([
-                'qty'           => $itemDet->qty + $stockUsage->qty,
-                'updated_by'    => auth()->user()->id,
-                'updated_at'    => date("Y-m-d H:i:s"),
-                'status'        => 1
+                'status' => 3,
+                'updated_by' => auth()->user()->id,
+                'updated_at' => date("Y-m-d H:i:s")
             ]);
             
             DB::commit();
@@ -304,6 +392,214 @@ class StockUsageController extends Controller
             return response()->json([
                 "status" => true,
                 "message" => "Stock Usage Rejected"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
+        }
+    }
+
+    public function updateUsage(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            "items"    => "array"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        if (!StockUsageHeader::where('id', $id)->where('status', 1)->exists())
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Adjustment not found"
+            ], 404);
+        }
+
+        $stockUsage = StockUsageHeader::where('id', $id)->whereIn('status', [1, 3])->first();
+
+        if ($stockUsage == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Usage not found or already approved !"
+            ], 404);
+        }
+
+        $date = strtotime($request->transaction_date ?? $stockUsage->transaction_date);
+        $transactionDate = date('Y-m-d H:i:s',$date);
+
+        DB::beginTransaction();
+        try
+        {
+            $stockUsage->update([
+                'transaction_date'  => $transactionDate,
+                'reason'            => $request->reason ?? $stockUsage->reason,
+                'updated_by'        => auth()->user()->id,
+                'updated_at'        => date("Y-m-d H:i:s"),
+                'status'            => 1
+            ]);
+
+            if ($request->items != null)
+            {
+                foreach ($request->items as $item)
+                {
+                    $stockUsageDet = DB::table('stock_usage')
+                                ->join('items_details', 'stock_usage.item_detail_id', '=', 'items_details.id')
+                                ->where('stock_usage.stock_usage_id', $id)
+                                ->where('items_details.item_code', $item['code'])
+                                ->where('items_details.status', 1)
+                                ->where('stock_usage.status', 1)
+                                ->select('stock_usage.item_detail_id as item_detail_id', 'stock_usage.id as id')
+                                ->first();
+    
+                    if ($stockUsageDet == null)
+                    {
+                        DB::rollBack();
+                        return response()->json([
+                            "status" => false,
+                            "message" => "Stock Usage item not found"
+                        ], 404);
+                    }
+    
+                    if (isset($item['location_id']))
+                    {
+                        $itemDet = ItemDetail::where('item_code', $item['code'])->where('location_id', $item['location_id'])->where('status', 1)->first();
+                    }
+                    else
+                    {
+                        $itemDet = ItemDetail::where('id', $stockUsageDet->item_detail_id)->where('status', 1)->first();
+                    }
+    
+                    $stockUsageDet = StockUsage::where('id', $stockUsageDet->id)->where('status', 1)->first();
+    
+                    $stockUsageDet->update([
+                        'item_detail_id'        => $itemDet->id,
+                        'location_id'           => $item['location_id'],
+                        'qty'                   => $item['qty'],
+                        'created_by'            => auth()->user()->id,
+                        'updated_by'            => auth()->user()->id,
+                        'status'                => 1
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return response()->json([
+                "status" => true,
+                "message" => "Stock Usage Updated"
+            ]);
+        }
+        catch (\Throwable $e)
+        {
+            DB::rollBack();
+            return response()->json([
+                "status" => false,
+                "message" => $e
+            ], 500);
+        }
+    }
+
+    public function void(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "usage_id"    => "required"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $usage = StockUsageHeader::where('id', $request->usage_id)->where('status', 2)->first();
+
+        if ($usage == null)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Stock Usage not found"
+            ], 404);
+        }
+
+        DB::beginTransaction();
+        try
+        {
+            $usage->update([
+                'status'        => 4,
+                'updated_by'    => auth()->user()->id,
+                'updated_at'    => date("Y-m-d H:i:s")
+            ]);
+
+            $void = VoidTransaction::create([
+                'ref_id'            => $usage->doc_number,
+                'usage_id'          => $request->usage_id,
+                'reason'            => $request->reason,
+                'status'            => 1,
+                'updated_by'        => auth()->user()->id,
+                'updated_at'        => date("Y-m-d H:i:s")
+            ]);
+
+            $usageDet = StockUsage::where('stock_usage_id', $request->usage_id)->where('status', 1)->get();
+
+            foreach ($usageDet as $item)
+            {
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+
+                if ($itemDet == null)
+                {
+                    DB::rollBack();
+                    return response()->json([
+                        "status" => false,
+                        "message" => "Item not found"
+                    ], 404);
+                }
+
+                $itemDet->update([
+                    'qty'           => $itemDet->qty - $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s"),
+                ]);
+
+                $voidDetail = VoidDetails::create([
+                    'void_id'       => $void->id,
+                    'item_detail_id'=> $item->item_detail_id,
+                    'qty'           => $item->qty,
+                    'updated_by'    => auth()->user()->id,
+                    'updated_at'    => date("Y-m-d H:i:s")
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                "status" => true,
+                "message" => "Stock Usage Voided"
             ]);
         }
         catch (\Throwable $e)
