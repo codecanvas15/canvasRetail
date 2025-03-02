@@ -272,6 +272,7 @@ class StockAdjustmentController extends Controller
         $search = $request->input('search', null);
         $reason = $request->input('search_reason', null);
         $searchDocNumber = $request->input('search_doc_number', null);
+        $searchStatus = $request->input('search_status', null);
 
         $startAdjDate = $request->input('search_start_adj_date', null);
         $endAdjDate = $request->input('search_end_adj_date', null);
@@ -317,6 +318,11 @@ class StockAdjustmentController extends Controller
                 $date = new DateTime('now');
                 $endAdjDate = $date->format('Y-m-d');
                 $query->whereBetween('stock_adjustment_header.transaction_date', [$startAdjDate, $endAdjDate]);
+            }
+
+            if ($searchStatus != null)
+            {
+                $query->where('stock_adjustment_header.status', $searchStatus);
             }
         }
 

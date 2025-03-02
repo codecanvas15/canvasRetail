@@ -269,6 +269,7 @@ class StockUsageController extends Controller
         $search = $request->input('search', null);
         $reason = $request->input('search_reason', null);
         $searchDocNumber = $request->input('search_doc_number', null);
+        $searchStatus = $request->input('search_status', null);
 
         $startUsageDate = $request->input('search_start_usage_date', null);
         $endUsageDate = $request->input('search_end_usage_date', null);
@@ -314,6 +315,11 @@ class StockUsageController extends Controller
                 $date = new DateTime('now');
                 $endUsageDate = $date->format('Y-m-d');
                 $query->whereBetween('sales.sales_date', [$startUsageDate, $endUsageDate]);
+            }
+
+            if ($searchStatus != null)
+            {
+                $query->where('stock_usage_header.status', $searchStatus);
             }
         }
 

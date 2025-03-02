@@ -754,6 +754,7 @@ class ProcurementController extends Controller
         $search = $request->input('search', null);
         $searchVendor = $request->input('search_vendor', null);
         $searchDocNumber = $request->input('search_doc_number', null);
+        $searchStatus = $request->input('search_status', null);
 
         $startProcurementDate = $request->input('search_start_procurement_date', null);
         $endProcurementDate = $request->input('search_end_procurement_date', null);
@@ -805,6 +806,11 @@ class ProcurementController extends Controller
                 $date = new DateTime('now');
                 $endProcurementDate = $date->format('Y-m-d');
                 $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
+            }
+
+            if ($searchStatus != null)
+            {
+                $query->where('procurements.status', $searchStatus);
             }
         }
 

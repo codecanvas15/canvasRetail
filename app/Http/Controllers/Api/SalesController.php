@@ -667,6 +667,7 @@ class SalesController extends Controller
         $searchCustomer = $request->input('search_customer', null);
         $searchDocNumber = $request->input('search_doc_number', null);
         $searchPaymentStatus = $request->input('search_payment_status', null);
+        $searchStatus = $request->input('search_status', null);
 
         $startSalesDate = $request->input('search_start_sales_date', null);
         $endSalesDate = $request->input('search_end_sales_date', null);
@@ -735,6 +736,11 @@ class SalesController extends Controller
                 $date = new DateTime('now');
                 $endSalesDate = $date->format('Y-m-d');
                 $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
+            }
+
+            if ($searchStatus != null)
+            {
+                $query->where('sales.status', $searchStatus);
             }
         }
 
