@@ -26,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         //comment for development
-        URL::forceScheme('https');
+        // URL::forceScheme('https');
         date_default_timezone_set('Asia/Jakarta');
         Schema::defaultStringLength(2048);
         Schema::defaultStringLength(64, 'personal_access_tokens');

@@ -40,16 +40,20 @@ Route::group([
     // auth
     Route::get("refreshToken", [AuthController::class, "refreshToken"]);
     Route::get("profile", [AuthController::class, "profile"]);
-
+    
     // masters
     // User
+    Route::get("user", [UserController::class, "getUser"]);
+    Route::post("user", [UserController::class, "addUser"]);
+    Route::post("user-update", [UserController::class, "updateUser"]);
+    Route::delete("user/{id}", [UserController::class, "deleteUser"]);
 
     // item
-    Route::post("item",[ItemController::class, "addItem"]);
+    Route::post("item",[ItemController::class, "addItem"])->middleware('role:admin');
     Route::get("item",[ItemController::class, "getItem"]);
     Route::get("itemdetail",[ItemController::class, "getItemById"]);
-    Route::post("updateitem",[ItemController::class, "updateItem"]);
-    Route::delete("item",[ItemController::class, "deleteItem"]);
+    Route::post("updateitem",[ItemController::class, "updateItem"])->middleware('role:admin');
+    Route::delete("item",[ItemController::class, "deleteItem"])->middleware('role:admin');
 
     // get categories
     Route::get("categories",[ItemController::class, "getUniqueCategories"]);
@@ -91,6 +95,8 @@ Route::group([
     Route::delete("procurement/{id}", [ProcurementController::class, "deleteProcurement"]);
     Route::get("generatePo", [ProcurementController::class, "createPO"]);
     Route::get("procurement-item-detail", [ProcurementController::class, "getItemProcurement"]);
+    Route::post("procurement/approve", [ProcurementController::class, "approveProcurement"]);
+    Route::post("void/procurement", [ProcurementController::class, "void"]);
     
     // sales
     Route::post("sales", [SalesController::class, "addSales"]);
@@ -100,6 +106,8 @@ Route::group([
     Route::delete("sales/{id}", [SalesController::class, "deleteSales"]);
     Route::get("sales-item-detail", [SalesController::class, "getItemSales"]);
     Route::get("faktur", [SalesController::class, "faktur"]);
+    Route::post("sales/approve", [SalesController::class, "approveSales"]);
+    Route::post("void/sales", [SalesController::class, "void"]);
 
     // payment
     Route::post("payment", [PaymentController::class, "payment"]);
@@ -115,13 +123,19 @@ Route::group([
     Route::post("stockadjustment", [StockAdjustmentController::class, "adjustment"]);
     Route::get("stockadjustment", [StockAdjustmentController::class, "getAdjustment"]);
     Route::get("stockadjustment/{id}", [StockAdjustmentController::class, "getAdjustmentDetail"]);
+    Route::post("stockadjustment/{id}", [StockAdjustmentController::class, "updateAdjustment"]);
     Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"]);
+    Route::post("stockadjustment/approve", [StockAdjustmentController::class, "approveAdjustment"]);
+    Route::post("void/stockadjustment", [StockAdjustmentController::class, "void"]);
     
     // stock usage
     Route::post("stockusage", [StockUsageController::class, "usage"]);
     Route::get("stockusage", [StockUsageController::class, "getUsage"]);
     Route::get("stockusage/{id}", [StockUsageController::class, "getUsageDetail"]);
+    Route::post("stockusage/{id}", [StockUsageController::class, "updateUsage"]);
     Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"]);
+    Route::post("stockusage/approve", [StockUsageController::class, "approveUsage"]);
+    Route::post("void/stockusage", [StockUsageController::class, "void"]);
 
     // reports
     // stockcard

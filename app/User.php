@@ -64,4 +64,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $date->format('Y-m-d H:i:s');
     }
+
+    public function hasRole($role)
+    {
+        return $this->role === $role; // Adjust this logic based on your role implementation
+    }
 }
