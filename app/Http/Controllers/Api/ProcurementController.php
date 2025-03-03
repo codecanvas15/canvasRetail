@@ -756,6 +756,7 @@ class ProcurementController extends Controller
         $searchVendor = $request->input('search_vendor', null);
         $searchDocNumber = $request->input('search_doc_number', null);
         $searchStatus = $request->input('search_status', null);
+        $searchPaymentStatus = $request->input('search_payment_status', null);
 
         $startProcurementDate = $request->input('search_start_procurement_date', null);
         $endProcurementDate = $request->input('search_end_procurement_date', null);
@@ -782,6 +783,7 @@ class ProcurementController extends Controller
             $query->where('contacts.name', 'like', '%' . $search . '%');
             $query->orWhere('procurements.doc_number', 'like', '%' . $search . '%');
             $query->orWhere('procurements.external_doc_no', 'like', '%' . $search . '%');
+            $query->orWhere('procurements.pay_status', 'like', '%' . $search . '%');
         }
         else
         {
@@ -812,6 +814,11 @@ class ProcurementController extends Controller
             if ($searchStatus != null)
             {
                 $query->where('procurements.status', $searchStatus);
+            }
+
+            if ($searchPaymentStatus != null)
+            {
+                $query->where('procurements.pay_status', $searchPaymentStatus);
             }
         }
 
