@@ -44,6 +44,7 @@ Route::group([
     // masters
     // User
     Route::get("user", [UserController::class, "getUser"]);
+    Route::get("user/{id}", [UserController::class, "getUserById"]);
     Route::post("user", [UserController::class, "addUser"]);
     Route::post("user-update", [UserController::class, "updateUser"]);
     Route::delete("user/{id}", [UserController::class, "deleteUser"]);

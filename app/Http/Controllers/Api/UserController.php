@@ -18,7 +18,6 @@ class UserController extends Controller
 
         return response()->json([
             "status" => true,
-            "message" => "User fetched successfully",
             "data" => $user
         ]);
     }
@@ -121,6 +120,24 @@ class UserController extends Controller
         return response()->json([
             "status" => true,
             "message" => "User deleted successfully"
+        ]);
+    }
+
+    public function getUserById($id)
+    {
+        $user = User::where('id', $id)->where('status', 1)->first();
+
+        if (!$user) 
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "User not found"
+            ], 404);
+        }
+
+        return response()->json([
+            "status" => true,
+            "data" => $user
         ]);
     }
 }
