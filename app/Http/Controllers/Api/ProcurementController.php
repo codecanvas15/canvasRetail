@@ -932,9 +932,9 @@ class ProcurementController extends Controller
 
     public function getProcurementById($id)
     {
-        if (Procurement::where('id', $id)->where('status', 1)->exists())
+        if (Procurement::where('id', $id)->exists())
         {
-            $procurement = Procurement::where('id', $id)->where('status', 1)->first();
+            $procurement = Procurement::where('id', $id)->first();
 
             $contact = Contact::where('id', $procurement->contact_id)->select('name')->first();
 

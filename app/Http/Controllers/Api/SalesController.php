@@ -765,9 +765,9 @@ class SalesController extends Controller
 
     public function getSalesById($id)
     {
-        if(Sales::where('id', $id)->where('status',1)->exists())
+        if(Sales::where('id', $id)->exists())
         {
-            $sales = Sales::where('id', $id)->where('status', 1)->first();
+            $sales = Sales::where('id', $id)->first();
 
             $contact = Contact::where('id', $sales->contact_id)->select('name')->first();
 
