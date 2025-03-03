@@ -39,8 +39,8 @@ class StockCardController extends Controller
         }
 
         $date = new DateTime('now');
-        $filterStartMonth = $date->format('Y-m-d');
-        $filterEndMonth = $date->format('Y-m-d');
+        $filterStartMonth = $date->modify('first day of this month')->format('Y-m-d');
+        $filterEndMonth = $date->modify('last day of this month')->format('Y-m-d');
 
         if ($request->start_month)
         {
@@ -49,7 +49,7 @@ class StockCardController extends Controller
 
         if ($request->end_month)
         {
-            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
+            $filterEndMonth = $endMonth->modify('last day of this month')->format('Y-m-d');
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -92,7 +92,8 @@ class StockCardController extends Controller
             SELECT
                 a.item_code,
                 COALESCE(a.procurement_qty, a.sales_qty * -1, a.adjustment_qty, a.usage_qty * -1) as saldo_qty,
-                IFNULL(a.procurement_total, 0) as saldo_nominal
+                IFNULL(a.procurement_total, 0) as saldo_nominal,
+                a.tx_date
             FROM 
                 stock_value_sum a
             WHERE
@@ -136,7 +137,6 @@ class StockCardController extends Controller
                 }
             }
 
-
             $saldoNominal = ($value < 0 ? $value * -1 : $value) * $saldoQty;
 
             if(sizeof($itemStockAwal) > 0)
@@ -148,16 +148,16 @@ class StockCardController extends Controller
             $itemStock = array_values(array_filter($stock, function($k) use ($item_code) {
                 return $k->item_code == $item_code;
             }));
-
+            
             for($j = 0; $j < sizeof($itemStock); $j++)
             {
                 $saldoQty = $saldoQty + ($itemStock[$j]->procurement_qty == null ? 0 : $itemStock[$j]->procurement_qty) - ($itemStock[$j]->sales_qty == null ? 0 : $itemStock[$j]->sales_qty) + ($itemStock[$j]->adjustment_qty == null ? 0 : $itemStock[$j]->adjustment_qty) - ($itemStock[$j]->usage_qty == null ? 0 : $itemStock[$j]->usage_qty);
-
+                
                 if ($itemStock[$j]->procurement_total != null)
                 {
                     // $saldoNominal += $itemStock[$j]->procurement_total;
                     $procurement_qty += $itemStock[$j]->procurement_qty;
-    
+                    
                     if ($procurement_qty == 0)
                     {
                         $value = 0;
@@ -207,14 +207,13 @@ class StockCardController extends Controller
                 {
                     $saldoKeluar = null;
                 }
-
+                
                 if ($saldoKeluar > 0)
                 {
-                    $saldoNominal += $value * $saldoKeluar;
+                    $saldoNominal -= $value * $saldoKeluar;
                 }
-
             }
-
+            
             $stockList[] = [
                 'item_code' => $item_code,
                 'item_name' => $item->name,
@@ -264,8 +263,8 @@ class StockCardController extends Controller
         }
 
         $date = new DateTime('now');
-        $filterStartMonth = $date->format('Y-m-d');
-        $filterEndMonth = $date->format('Y-m-d');
+        $filterStartMonth = $date->modify('first day of this month')->format('Y-m-d');
+        $filterEndMonth = $date->modify('last day of this month')->format('Y-m-d');
 
         if ($request->start_month)
         {
@@ -274,7 +273,7 @@ class StockCardController extends Controller
 
         if ($request->end_month)
         {
-            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
+            $filterEndMonth = $endMonth->modify('last day of this month')->format('Y-m-d');
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
