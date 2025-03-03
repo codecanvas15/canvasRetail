@@ -39,17 +39,17 @@ class StockCardController extends Controller
         }
 
         $date = new DateTime('now');
-        $filterStartMonth = $date->format('m-Y');
-        $filterEndMonth = $date->format('m-Y');
+        $filterStartMonth = $date->format('Y-m-d');
+        $filterEndMonth = $date->format('Y-m-d');
 
         if ($request->start_month)
         {
-            $filterStartMonth = $request->start_month;
+            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
         }
 
         if ($request->end_month)
         {
-            $filterEndMonth = $request->end_month;
+            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -74,16 +74,16 @@ class StockCardController extends Controller
                 stock_value a
             WHERE
                 (
-                    a.procurement_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.sales_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.adjustment_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.usage_date >= STR_TO_DATE(?, '%m-%Y')
+                    a.procurement_date >= ?
+                    or a.sales_date >= ?
+                    or a.adjustment_date >= ?
+                    or a.usage_date >= ?
                 ) AND
                 (
-                    a.procurement_date <= STR_TO_DATE(?, '%m-%Y')
-                    or a.sales_date <= STR_TO_DATE(?, '%m-%Y')
-                    or a.adjustment_date <= STR_TO_DATE(?, '%m-%Y')
-                    or a.usage_date <= STR_TO_DATE(?, '%m-%Y')
+                    a.procurement_date <= ?
+                    or a.sales_date <= ?
+                    or a.adjustment_date <= ?
+                    or a.usage_date <= ?
                 )
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
         ", [$filterStartMonth, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth]);
@@ -96,7 +96,7 @@ class StockCardController extends Controller
             FROM 
                 stock_value_sum a
             WHERE
-                a.tx_date <= STR_TO_DATE(?, '%m-%Y')
+                a.tx_date <= ?
             ORDER BY a.item_code, a.created_at
         ", [$filterStartMonth]);
 
@@ -264,17 +264,17 @@ class StockCardController extends Controller
         }
 
         $date = new DateTime('now');
-        $filterStartMonth = $date->format('m-Y');
-        $filterEndMonth = $date->format('m-Y');
+        $filterStartMonth = $date->format('Y-m-d');
+        $filterEndMonth = $date->format('Y-m-d');
 
         if ($request->start_month)
         {
-            $filterStartMonth = $request->start_month;
+            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
         }
 
         if ($request->end_month)
         {
-            $filterEndMonth = $request->end_month;
+            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -302,16 +302,16 @@ class StockCardController extends Controller
             WHERE
                 a.item_code = ?
                 AND (
-                    a.procurement_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.sales_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.adjustment_date >= STR_TO_DATE(?, '%m-%Y')
-                    or a.usage_date >= STR_TO_DATE(?, '%m-%Y')
+                    a.procurement_date >= ?
+                    or a.sales_date >= ?
+                    or a.adjustment_date >= ?
+                    or a.usage_date >= ?
                 )
                 AND (
-                    a.procurement_date <= STR_TO_DATE(?, '%m-%Y')
-                    or a.sales_date <= STR_TO_DATE(?, '%m-%Y')
-                    or a.adjustment_date <= STR_TO_DATE(?, '%m-%Y')
-                    or a.usage_date <= STR_TO_DATE(?, '%m-%Y')
+                    a.procurement_date <= ?
+                    or a.sales_date <= ?
+                    or a.adjustment_date <= ?
+                    or a.usage_date <= ?
                 )
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
         ", [$request->item_code, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth]);
@@ -324,7 +324,7 @@ class StockCardController extends Controller
             FROM 
                 stock_value_sum a
             WHERE
-                a.tx_date <= STR_TO_DATE(?, '%m-%Y')
+                a.tx_date <= ?
                 AND a.item_code = ?
             ORDER BY a.item_code, a.created_at
         ", [$filterStartMonth, $request->item_code]);
