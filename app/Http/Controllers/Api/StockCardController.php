@@ -396,7 +396,7 @@ class StockCardController extends Controller
 
                 if ($item[$j]->sales_total != null || $item[$j]->sales_qty != null)
                 {
-                    $item[$j]->sales_total = $value;
+                    $item[$j]->sales_total = $value * $item[$j]->sales_qty;
                 }
 
                 $adjustment_total = null;
