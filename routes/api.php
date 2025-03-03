@@ -95,7 +95,7 @@ Route::group([
     Route::delete("procurement/{id}", [ProcurementController::class, "deleteProcurement"]);
     Route::get("generatePo", [ProcurementController::class, "createPO"]);
     Route::get("procurement-item-detail", [ProcurementController::class, "getItemProcurement"]);
-    Route::post("procurement/approve", [ProcurementController::class, "approveProcurement"]);
+    Route::post("approve/procurement", [ProcurementController::class, "approveProcurement"]);
     Route::post("void/procurement", [ProcurementController::class, "void"]);
     
     // sales
@@ -106,7 +106,7 @@ Route::group([
     Route::delete("sales/{id}", [SalesController::class, "deleteSales"]);
     Route::get("sales-item-detail", [SalesController::class, "getItemSales"]);
     Route::get("faktur", [SalesController::class, "faktur"]);
-    Route::post("sales/approve", [SalesController::class, "approveSales"]);
+    Route::post("approve/sales", [SalesController::class, "approveSales"]);
     Route::post("void/sales", [SalesController::class, "void"]);
 
     // payment
@@ -125,7 +125,7 @@ Route::group([
     Route::get("stockadjustment/{id}", [StockAdjustmentController::class, "getAdjustmentDetail"]);
     Route::post("stockadjustment/{id}", [StockAdjustmentController::class, "updateAdjustment"]);
     Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"]);
-    Route::post("stockadjustment/approve", [StockAdjustmentController::class, "approveAdjustment"]);
+    Route::post("approve/stockadjustment", [StockAdjustmentController::class, "approveAdjustment"]);
     Route::post("void/stockadjustment", [StockAdjustmentController::class, "void"]);
     
     // stock usage
@@ -134,7 +134,7 @@ Route::group([
     Route::get("stockusage/{id}", [StockUsageController::class, "getUsageDetail"]);
     Route::post("stockusage/{id}", [StockUsageController::class, "updateUsage"]);
     Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"]);
-    Route::post("stockusage/approve", [StockUsageController::class, "approveUsage"]);
+    Route::post("approve/stockusage", [StockUsageController::class, "approveUsage"]);
     Route::post("void/stockusage", [StockUsageController::class, "void"]);
 
     // reports

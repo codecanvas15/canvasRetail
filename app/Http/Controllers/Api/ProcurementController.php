@@ -317,7 +317,7 @@ class ProcurementController extends Controller
         {
             return response()->json([
                 "status" => false,
-                "message" => "Procurement not found"
+                "message" => "Procurement not found or aleady approved"
             ], 404);
         }
 
@@ -339,7 +339,7 @@ class ProcurementController extends Controller
                     "message" => "Procurement Rejected"
                 ]);
             }
-    
+
             $procurement->update([
                 'status'        => 2,
                 'updated_by'    => auth()->user()->id,
@@ -646,7 +646,7 @@ class ProcurementController extends Controller
         {
             return response()->json([
                 "status" => false,
-                "message" => "Procurement not found or already approved"
+                "message" => "Procurement not found or not approved yet"
             ], 404);
         }
     }
@@ -725,7 +725,8 @@ class ProcurementController extends Controller
                     'item_detail_id'=> $item->item_detail_id,
                     'qty'           => $item->qty,
                     'updated_by'    => auth()->user()->id,
-                    'updated_at'    => date("Y-m-d H:i:s")
+                    'updated_at'    => date("Y-m-d H:i:s"),
+                    'status'        => 1
                 ]);
             }
 
