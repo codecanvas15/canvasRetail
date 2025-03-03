@@ -394,8 +394,7 @@ class StockCardController extends Controller
                     $value = $saldoNominal / $saldoQty;
                 }
 
-
-                if ($item[$j]->sales_total != null)
+                if ($item[$j]->sales_total != null || $item[$j]->sales_qty != null)
                 {
                     $item[$j]->sales_total = $value;
                 }
@@ -408,7 +407,7 @@ class StockCardController extends Controller
                     $adjustment_total = $value;
                 }
 
-                if ($item[$j]->adjustment_qty != null)
+                if ($item[$j]->usage_qty != null)
                 {
                     $usage_total = $value;
                 }
