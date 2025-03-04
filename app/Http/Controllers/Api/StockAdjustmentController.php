@@ -166,7 +166,7 @@ class StockAdjustmentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             "adjustment_id"    => "required",
-            "is_approve"       => "required|boolean"
+            "is_approve"       => "required||in:1,0"
         ]);
 
         if ($validator->fails()) {

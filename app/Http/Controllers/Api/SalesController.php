@@ -305,7 +305,7 @@ class SalesController extends Controller
             ], 400);
         }
 
-        $sales = Sales::where('id', $request->sales_id)->where('status', 1)->first();
+        $sales = Sales::where('id', $id)->where('status', 1)->first();
         
         if ($sales == null)
         {
@@ -372,7 +372,7 @@ class SalesController extends Controller
                 'tax'           => $totalTax
             ]);
             
-            $salesDet = SalesDetail::where('sales_id', $request->sales_id)->where('status', 1)->get();
+            $salesDet = SalesDetail::where('sales_id', $id)->where('status', 1)->get();
             $totalAmount = 0;
             
             if ($request->itemDetails != null)
@@ -571,10 +571,11 @@ class SalesController extends Controller
         }
     }
 
-    public function approveSales(Request $request, $id)
+    public function approveSales(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "delivery_status"    => "required"
+            "sales_id"    => "required",
+            "is_approve"  => "required|in:1,0",
         ]);
 
         if ($validator->fails()) {
@@ -584,7 +585,7 @@ class SalesController extends Controller
             ]);
         }
 
-        $sales = Sales::where('id', $id)->where('status', 1)->first();
+        $sales = Sales::where('id', $request->sales_id)->where('status', 1)->first();
 
         if ($sales == null)
         {
@@ -623,7 +624,7 @@ class SalesController extends Controller
     
             foreach ($request->itemDetails as $item)
             {
-                $salesDet = SalesDetail::where('id', $item['id'])->where('status', 1)->where('sales_id', $id)->first();
+                $salesDet = SalesDetail::where('id', $item['id'])->where('status', 1)->where('sales_id', $request->sales_id)->first();
     
                 if ($salesDet == null)
                 {
