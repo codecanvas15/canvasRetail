@@ -340,6 +340,7 @@ class StockAdjustmentController extends Controller
                 'total_pages' => $stockAdjustment->lastPage(),
                 'next_page' => $stockAdjustment->nextPageUrl(),
                 'prev_page' => $stockAdjustment->previousPageUrl(),
+                'total_data' => $stockAdjustment->total(),
             ],
         ]);
     }

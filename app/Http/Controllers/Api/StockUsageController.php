@@ -337,6 +337,7 @@ class StockUsageController extends Controller
                 'total_pages' => $stockUsage->lastPage(),
                 'next_page' => $stockUsage->nextPageUrl(),
                 'prev_page' => $stockUsage->previousPageUrl(),
+                'total_data' => $stockUsage->total(),
             ],
         ]);
     }

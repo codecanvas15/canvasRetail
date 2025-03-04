@@ -227,12 +227,12 @@ class StockCardController extends Controller
             "status" => true,
             "data" => $stockList,
             "pagination" => [
-                "total" => sizeof($stockList),
                 "per_page" => $items->perPage(),
                 "current_page" => $items->currentPage(),
                 "last_page" => $items->lastPage(),
                 "next_page_url" => $items->nextPageUrl(),
                 "prev_page_url" => $items->previousPageUrl(),
+                "total_data" => sizeof($stockList),
             ]
         ]);
     }
