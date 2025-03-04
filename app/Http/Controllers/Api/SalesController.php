@@ -216,31 +216,31 @@ class SalesController extends Controller
                 $roundedAmount = round($totalAmount);
             }
 
-            $outstanding = $roundedAmount - $request->pay_amount;
+            // $outstanding = $roundedAmount - $request->pay_amount;
 
-            $paymentStatus = '';
-            if ($outstanding > 0)
-            {
-                $paymentStatus = 'Partially Paid';
-            }
-            else if ($outstanding < 0)
-            {
-                DB::rollBack();
+            // $paymentStatus = '';
+            // if ($outstanding > 0)
+            // {
+            //     $paymentStatus = 'Partially Paid';
+            // }
+            // else if ($outstanding < 0)
+            // {
+            //     DB::rollBack();
                 
-                return response()->json([
-                    "status" => false,
-                    "message" => "Total Payment amount is greater than sales amount."
-                ], 400);
-            }
-            else if ($outstanding == 0)
-            {
-                $paymentStatus = 'Paid';
-            }
+            //     return response()->json([
+            //         "status" => false,
+            //         "message" => "Total Payment amount is greater than sales amount."
+            //     ], 400);
+            // }
+            // else if ($outstanding == 0)
+            // {
+            //     $paymentStatus = 'Paid';
+            // }
 
-            if ($request->pay_amount == 0)
-            {
+            // if ($request->pay_amount == 0)
+            // {
                 $paymentStatus = 'Unpaid';
-            }
+            // }
             // dd($totalTax)
 
             $sales->update([
@@ -251,16 +251,16 @@ class SalesController extends Controller
                 'tax'           => implode('|', $totalTax)
             ]);
 
-            Payment::create([
-                'sales_id'      => $sales->id,
-                'type'          => "IN",
-                'amount'        => $request->pay_amount ?? 0,
-                'pay_date'      => date("Y-m-d H:i:s"),
-                'created_by'    => auth()->user()->id,
-                'updated_by'    => auth()->user()->id,
-                'status'        => 1,
-                'pay_desc'      => "Initial Payment"
-            ]);
+            // Payment::create([
+            //     'sales_id'      => $sales->id,
+            //     'type'          => "IN",
+            //     'amount'        => $request->pay_amount ?? 0,
+            //     'pay_date'      => date("Y-m-d H:i:s"),
+            //     'created_by'    => auth()->user()->id,
+            //     'updated_by'    => auth()->user()->id,
+            //     'status'        => 1,
+            //     'pay_desc'      => "Initial Payment"
+            // ]);
 
             DB::commit();
 
@@ -518,30 +518,30 @@ class SalesController extends Controller
                 $roundedAmount = round($totalAmount);
             }
 
-            $payment = Payment::where('sales_id', $sales->id)->where('status', 1)->where('pay_desc', 'Initial Payment')->where('type', 'IN')->first();
+            // $payment = Payment::where('sales_id', $sales->id)->where('status', 1)->where('pay_desc', 'Initial Payment')->where('type', 'IN')->first();
         
-            $payment->update([
-                'amount'        => $request->pay_amount ?? $payment->amount,
-                'updated_by'    => auth()->user()->id,
-                'updated_at'    => date("Y-m-d H:i:s")
-            ]);
+            // $payment->update([
+            //     'amount'        => $request->pay_amount ?? $payment->amount,
+            //     'updated_by'    => auth()->user()->id,
+            //     'updated_at'    => date("Y-m-d H:i:s")
+            // ]);
 
-            $outstanding = $roundedAmount - $payment->amount;
+            // $outstanding = $roundedAmount - $payment->amount;
 
-            $paymentStatus = '';
-            if ($outstanding > 0)
-            {
-                $paymentStatus = 'Partially Paid';
-            }
-            else if ($outstanding <= 0)
-            {
-                $paymentStatus = 'Paid';
-            }
+            // $paymentStatus = '';
+            // if ($outstanding > 0)
+            // {
+            //     $paymentStatus = 'Partially Paid';
+            // }
+            // else if ($outstanding <= 0)
+            // {
+            //     $paymentStatus = 'Paid';
+            // }
 
-            if ($request->pay_amount == 0 && $outstanding == $roundedAmount)
-            {
+            // if ($request->pay_amount == 0 && $outstanding == $roundedAmount)
+            // {
                 $paymentStatus = 'Unpaid';
-            }
+            // }
 
             $sales->update([
                 'amount'        => $roundedAmount,
