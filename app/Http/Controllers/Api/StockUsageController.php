@@ -314,7 +314,7 @@ class StockUsageController extends Controller
                 $startUsageDate = (new DateTime($startUsageDate))->modify('first day of this month')->format('Y-m-d');
                 $date = new DateTime('now');
                 $endUsageDate = $date->format('Y-m-d');
-                $query->whereBetween('sales.sales_date', [$startUsageDate, $endUsageDate]);
+                $query->whereBetween('stock_usage_header.transaction_date', [$startUsageDate, $endUsageDate]);
             }
 
             if ($searchStatus != null)
