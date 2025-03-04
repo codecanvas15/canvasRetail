@@ -21,7 +21,7 @@ FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
     RIGHT JOIN procurement_details pd ON id.id = pd.item_detail_id and pd.status = 1
-    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status = 1
+    LEFT OUTER JOIN procurements p ON pd.procurement_id = p.id and p.status IN (2,4)
     JOIN locations l ON id.location_id = l.id and l.status = 1
 WHERE
     i.status = 1
@@ -48,7 +48,7 @@ FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
     RIGHT JOIN sales_details sd ON id.id = sd.item_detail_id and sd.status = 1
-    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status = 1
+    LEFT OUTER JOIN sales s ON sd.sales_id = s.id and s.status IN (2,4)
     JOIN locations l ON id.location_id = l.id and l.status = 1
 WHERE
     i.status = 1
@@ -75,7 +75,7 @@ FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
     RIGHT JOIN stock_adjustment sa ON id.id = sa.item_detail_id and sa.status = 1
-    LEFT OUTER JOIN stock_adjustment_header sah ON sa.stock_adjustment_id = sah.id and sah.status = 1
+    LEFT OUTER JOIN stock_adjustment_header sah ON sa.stock_adjustment_id = sah.id and sah.status IN (2,4)
     JOIN locations l ON id.location_id = l.id and l.status = 1
 WHERE
     i.status = 1
@@ -102,7 +102,72 @@ FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
     RIGHT JOIN stock_usage su ON id.id = su.item_detail_id and su.status = 1
-    LEFT OUTER JOIN stock_usage_header suh ON su.stock_usage_id = suh.id and suh.status = 1
+    LEFT OUTER JOIN stock_usage_header suh ON su.stock_usage_id = suh.id and suh.status IN (2,4)
     JOIN locations l ON id.location_id = l.id and l.status = 1
 WHERE
-    i.status = 1;
+    i.status = 1
+UNION ALL
+SELECT
+    i.item_code,
+    i.name as item_name,
+    l.name as location_name,
+    (
+        SELECT
+            s.sales_date
+        FROM
+            sales s
+        WHERE
+            s.id = vt.sales_id
+    ) as procurement_date,
+    CASE 
+        WHEN vt.sales_id is not null THEN vd.qty
+        ELSE null
+    END as procurement_qty,
+    null as procurement_price,
+    null as procurement_total,
+    (
+        SELECT
+            p.procurement_date
+        FROM
+            procurements p
+        WHERE
+            p.id = vt.procurement_id
+    ) as sales_date,
+    CASE 
+        WHEN vt.procurement_id is not null THEN vd.qty
+        ELSE null
+    END as sales_qty,
+    null as sales_price,
+    null as sales_total,
+    (
+        SELECT
+            sah.transaction_date
+        FROM
+            stock_adjustment_header sah
+        WHERE
+            sah.id = vt.adjustment_id
+    ) as adjustment_date,
+    CASE 
+        WHEN vt.adjustment_id is not null THEN vd.qty
+        ELSE null
+    END as adjustment_qty,
+    (
+        SELECT
+            suh.transaction_date
+        FROM
+            stock_usage_header suh
+        WHERE
+            suh.id = vt.usage_id
+    ) as usage_date,
+    CASE 
+        WHEN vt.usage_id is not null THEN vd.qty
+        ELSE null
+    END as usage_qty,
+    vt.created_at as created_at,
+    CONCAT('VOID', ' ', vt.ref_id) as doc_number
+FROM
+    items i
+    JOIN items_details id ON i.item_code = id.item_code and id.status = 1
+    RIGHT JOIN void_detail vd ON id.id = vd.item_detail_id and vd.status = 1
+    LEFT OUTER JOIN void_transaction vt ON vd.void_id = vt.id and vt.status = 1
+    JOIN locations l ON id.location_id = l.id and l.status = 1;
