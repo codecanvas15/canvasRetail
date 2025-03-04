@@ -17,8 +17,8 @@ class StockCardController extends Controller
     public function getStockCardList(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "start_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/'],
-            "end_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/']
+            "start_date"  => ['date_format:d-m-Y'],
+            "end_date"  => ['date_format:d-m-Y']
         ]);
 
         if ($validator->fails()) {
@@ -28,28 +28,28 @@ class StockCardController extends Controller
             ]);
         }
 
-        $startMonth = DateTime::createFromFormat('m-Y', $request->start_month);
-        $endMonth = DateTime::createFromFormat('m-Y', $request->end_month);
+        $startDate = DateTime::createFromFormat('d-m-Y', $request->start_date);
+        $endDate = DateTime::createFromFormat('d-m-Y', $request->end_date);
 
-        if ($startMonth > $endMonth) {
+        if ($startDate > $endDate) {
             return response()->json([
                 "status" => false,
-                "message" => "The start month cannot be after the end month."
+                "message" => "The start date cannot be after the end date."
             ], 400);
         }
 
         $date = new DateTime('now');
-        $filterStartMonth = $date->modify('first day of this month')->format('Y-m-d');
-        $filterEndMonth = $date->modify('last day of this month')->format('Y-m-d');
+        $filterStartDate = $date->modify('first day of this Month')->format('Y-m-d');
+        $filterEndDate = $date->modify('last day of this Month')->format('Y-m-d');
 
-        if ($request->start_month)
+        if ($request->start_date)
         {
-            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
+            $filterStartDate = $startDate->format('Y-m-d');
         }
 
-        if ($request->end_month)
+        if ($request->end_date)
         {
-            $filterEndMonth = $endMonth->modify('last day of this month')->format('Y-m-d');
+            $filterEndDate = $endDate->format('Y-m-d');
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -86,7 +86,7 @@ class StockCardController extends Controller
                     or a.usage_date <= ?
                 )
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
-        ", [$filterStartMonth, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth]);
+        ", [$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate]);
 
         $stockAwal = DB::select("
             SELECT
@@ -99,7 +99,7 @@ class StockCardController extends Controller
             WHERE
                 a.tx_date <= ?
             ORDER BY a.item_code, a.created_at
-        ", [$filterStartMonth]);
+        ", [$filterStartDate]);
 
         $items = Item::where('status', 1)->paginate(10); // Add pagination here
 
@@ -240,8 +240,8 @@ class StockCardController extends Controller
     public function getStockCardDetails(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "start_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/'],
-            "end_month"  => ['regex:/^(0[1-9]|1[0-2])-\d{4}$/'],
+            "start_date"  => ['date_format:d-m-Y'],
+            "end_date"  => ['date_format:d-m-Y'],
             "item_code"   => ['required']
         ]);
 
@@ -252,28 +252,28 @@ class StockCardController extends Controller
             ]);
         }
 
-        $startMonth = DateTime::createFromFormat('m-Y', $request->start_month);
-        $endMonth = DateTime::createFromFormat('m-Y', $request->end_month);
+        $startDate = DateTime::createFromFormat('d-m-Y', $request->start_date);
+        $endDate = DateTime::createFromFormat('d-m-Y', $request->end_date);
 
-        if ($startMonth > $endMonth) {
+        if ($startDate > $endDate) {
             return response()->json([
                 "status" => false,
-                "message" => "The start month cannot be after the end month."
+                "message" => "The start date cannot be after the end date."
             ], 400);
         }
 
         $date = new DateTime('now');
-        $filterStartMonth = $date->modify('first day of this month')->format('Y-m-d');
-        $filterEndMonth = $date->modify('last day of this month')->format('Y-m-d');
+        $filterStartDate = $date->modify('first day of this Month')->format('Y-m-d');
+        $filterEndDate = $date->modify('last day of this Month')->format('Y-m-d');
 
-        if ($request->start_month)
+        if ($request->start_date)
         {
-            $filterStartMonth = $startMonth->modify('first day of this month')->format('Y-m-d');
+            $filterStartDate = $startDate->format('Y-m-d');
         }
 
-        if ($request->end_month)
+        if ($request->end_date)
         {
-            $filterEndMonth = $endMonth->modify('last day of this month')->format('Y-m-d');
+            $filterEndDate = $endDate->format('Y-m-d');
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -313,7 +313,7 @@ class StockCardController extends Controller
                     or a.usage_date <= ?
                 )
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", [$request->item_code, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterStartMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth, $filterEndMonth]);
+        ", [$request->item_code, $filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate]);
 
         $stockAwal = DB::select("
             SELECT
@@ -326,7 +326,7 @@ class StockCardController extends Controller
                 a.tx_date <= ?
                 AND a.item_code = ?
             ORDER BY a.item_code, a.created_at
-        ", [$filterStartMonth, $request->item_code]);
+        ", [$filterStartDate, $request->item_code]);
 
         $result = [];
 

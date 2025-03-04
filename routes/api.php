@@ -125,7 +125,7 @@ Route::group([
     Route::get("stockadjustment", [StockAdjustmentController::class, "getAdjustment"]);
     Route::get("stockadjustment/{id}", [StockAdjustmentController::class, "getAdjustmentDetail"]);
     Route::post("stockadjustment/{id}", [StockAdjustmentController::class, "updateAdjustment"]);
-    Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"]);
+    // Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"]);
     Route::post("approve/stockadjustment", [StockAdjustmentController::class, "approveAdjustment"]);
     Route::post("void/stockadjustment", [StockAdjustmentController::class, "void"]);
     
@@ -134,7 +134,7 @@ Route::group([
     Route::get("stockusage", [StockUsageController::class, "getUsage"]);
     Route::get("stockusage/{id}", [StockUsageController::class, "getUsageDetail"]);
     Route::post("stockusage/{id}", [StockUsageController::class, "updateUsage"]);
-    Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"]);
+    // Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"]);
     Route::post("approve/stockusage", [StockUsageController::class, "approveUsage"]);
     Route::post("void/stockusage", [StockUsageController::class, "void"]);
 
