@@ -232,7 +232,7 @@ class StockCardController extends Controller
                 "last_page" => $items->lastPage(),
                 "next_page_url" => $items->nextPageUrl(),
                 "prev_page_url" => $items->previousPageUrl(),
-                "total_data" => sizeof($stockList),
+                "total_data" => $items->total(),
             ]
         ]);
     }
