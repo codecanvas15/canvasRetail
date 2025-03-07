@@ -620,7 +620,8 @@ class StockAdjustmentController extends Controller
                     'item_detail_id'=> $item->item_detail_id,
                     'qty'           => $item->qty,
                     'updated_by'    => auth()->user()->id,
-                    'updated_at'    => date("Y-m-d H:i:s")
+                    'updated_at'    => date("Y-m-d H:i:s"),
+                    'status'        => 1
                 ]);
             }
 

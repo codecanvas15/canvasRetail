@@ -16,6 +16,7 @@ class VoidDetails extends Model
         'item_detail_id',
         'qty',
         'updated_by',
-        'updated_at'
+        'updated_at',
+        'status'
     ];
 }

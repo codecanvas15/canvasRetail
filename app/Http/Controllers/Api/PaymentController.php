@@ -82,7 +82,7 @@ class PaymentController extends Controller
                 {
                     $paymentStatus = 'Partially Paid';
                 }
-                else if ($outstanding > $sales->amount)
+                else if ($outstanding < 0)
                 {
                     return response()->json([
                         "status" => false,
@@ -156,7 +156,7 @@ class PaymentController extends Controller
                 {
                     $paymentStatus = 'Partially Paid';
                 }
-                else if ($outstanding < $procurement->amount)
+                else if ($outstanding < 0)
                 {
                     return response()->json([
                         "status" => false,

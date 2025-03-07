@@ -621,27 +621,34 @@ class SalesController extends Controller
                 'updated_by'        => auth()->user()->id,
                 'updated_at'        => date("Y-m-d H:i:s")
             ]);
+
+
+            $salesDet = SalesDetail::where('status', 1)->where('sales_id', $request->sales_id)->get();
     
-            foreach ($request->itemDetails as $item)
+            foreach ($salesDet as $item)
             {
-                $salesDet = SalesDetail::where('id', $item['id'])->where('status', 1)->where('sales_id', $request->sales_id)->first();
-    
-                if ($salesDet == null)
+                $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
+
+                if ($itemDet == null)
                 {
-                    DB::rollBack();
-                    return response()->json([
-                        "status" => false,
-                        "message" => "Item not found"
-                    ], 404);
+                    $itemDet = ItemDetail::create([
+                        'item_code'     => $item['item_code'],
+                        'location_id'   => $request->location_id,
+                        'qty'           => $item['qty'],
+                        'price'         => $item['price'],
+                        'created_by'    => auth()->user()->id,
+                        'updated_by'    => auth()->user()->id,
+                        'status'        => 1
+                    ]);
                 }
-    
-                $salesDet->update([
-                    'qty'           => $item['qty'] ?? $salesDet->qty,
-                    'price'         => $item['price'] ?? $salesDet->price,
-                    'total'         => $item['total'] ?? $salesDet->total,
-                    'updated_by'    => auth()->user()->id,
-                    'updated_at'    => date("Y-m-d H:i:s")
-                ]);
+                else
+                {
+                    $itemDet->update([
+                        'qty'           => $itemDet->qty + $item->qty,
+                        'updated_by'    => auth()->user()->id,
+                        'updated_at'    => date("Y-m-d H:i:s"),
+                    ]);
+                }
             }
     
             DB::commit();
