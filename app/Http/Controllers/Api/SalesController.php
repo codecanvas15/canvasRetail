@@ -1142,7 +1142,7 @@ class SalesController extends Controller
                 'updated_at'        => date("Y-m-d H:i:s")
             ]);
 
-            $salesDet = SalesDetail::where('procurement_id', $request->procurement_id)->where('status', 1)->get();
+            $salesDet = SalesDetail::where('sales_id', $request->sales_id)->where('status', 1)->get();
 
             foreach ($salesDet as $item)
             {
