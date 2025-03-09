@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Item;
-use App\ItemDetail;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -18,7 +17,8 @@ class StockCardController extends Controller
     {
         $validator = Validator::make($request->all(), [
             "start_date"  => ['date_format:d-m-Y'],
-            "end_date"  => ['date_format:d-m-Y']
+            "end_date"  => ['date_format:d-m-Y'],
+            "location_id" => ['nullable', 'integer']
         ]);
 
         if ($validator->fails()) {
@@ -69,7 +69,8 @@ class StockCardController extends Controller
                 a.adjustment_date,
                 a.adjustment_qty,
                 a.usage_date,
-                a.usage_qty
+                a.usage_qty,
+                a.location_id
             FROM 
                 stock_value a
             WHERE
@@ -151,7 +152,10 @@ class StockCardController extends Controller
             
             for($j = 0; $j < sizeof($itemStock); $j++)
             {
-                $saldoQty = $saldoQty + ($itemStock[$j]->procurement_qty == null ? 0 : $itemStock[$j]->procurement_qty) - ($itemStock[$j]->sales_qty == null ? 0 : $itemStock[$j]->sales_qty) + ($itemStock[$j]->adjustment_qty == null ? 0 : $itemStock[$j]->adjustment_qty) - ($itemStock[$j]->usage_qty == null ? 0 : $itemStock[$j]->usage_qty);
+                if ($itemStock[$j]->location_id == $request->location_id || $request->location_id == null)
+                {
+                    $saldoQty = $saldoQty + ($itemStock[$j]->procurement_qty == null ? 0 : $itemStock[$j]->procurement_qty) - ($itemStock[$j]->sales_qty == null ? 0 : $itemStock[$j]->sales_qty) + ($itemStock[$j]->adjustment_qty == null ? 0 : $itemStock[$j]->adjustment_qty) - ($itemStock[$j]->usage_qty == null ? 0 : $itemStock[$j]->usage_qty);
+                }
                 
                 if ($itemStock[$j]->procurement_total != null)
                 {
