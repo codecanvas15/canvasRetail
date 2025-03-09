@@ -227,10 +227,10 @@ class GenerateReport extends Command
         $writer = new Xlsx($spreadsheet);
         $writer->save($filePath);
 
-        // $queue->update([
-        //     'status' => 2,
-        //     'file' => url('report/procurement/' . $filename)
-        // ]);
+        $queue->update([
+            'status' => 2,
+            'file' => url('report/procurement/' . $filename)
+        ]);
 
         Log::channel('report')->info(' ' . url('report/procurement/' . $filename));
 
@@ -371,6 +371,11 @@ class GenerateReport extends Command
         // Save the spreadsheet to a file
         $writer = new Xlsx($spreadsheet);
         $writer->save($filePath);
+
+        $queue->update([
+            'status' => 2,
+            'file' => url('report/procurement/' . $filename)
+        ]);
 
         Log::channel('report')->info(' ' . url('report/sales/' . $filename));
 
@@ -610,6 +615,11 @@ class GenerateReport extends Command
         // Save the spreadsheet to a file
         $writer = new Xlsx($spreadsheet);
         $writer->save($filePath);
+
+        $queue->update([
+            'status' => 2,
+            'file' => url('report/procurement/' . $filename)
+        ]);
 
         Log::channel('report')->info(' ' . url('report/stockcard/' . $filename));
 
@@ -913,6 +923,11 @@ class GenerateReport extends Command
         // Save the spreadsheet to a file
         $writer = new Xlsx($spreadsheet);
         $writer->save($filePath);
+
+        $queue->update([
+            'status' => 2,
+            'file' => url('report/procurement/' . $filename)
+        ]);
 
         Log::channel('report')->info(' ' . url('report/stockvalue/' . $filename));
 
