@@ -98,7 +98,7 @@ class StockCardController extends Controller
             FROM 
                 stock_value_sum a
             WHERE
-                a.tx_date <= ?
+                a.tx_date < ?
             ORDER BY a.item_code, a.created_at
         ", [$filterStartDate]);
 
@@ -327,7 +327,7 @@ class StockCardController extends Controller
             FROM 
                 stock_value_sum a
             WHERE
-                a.tx_date <= ?
+                a.tx_date < ?
                 AND a.item_code = ?
             ORDER BY a.item_code, a.created_at
         ", [$filterStartDate, $request->item_code]);

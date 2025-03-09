@@ -8,7 +8,8 @@ SELECT
     null as adjustment_qty,
     null as usage_qty,
     p.procurement_date as tx_date,
-    p.created_at as created_at
+    p.created_at as created_at,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status =1 
@@ -27,7 +28,8 @@ SELECT
     null as adjustment_qty,
     null as usage_qty,
     s.sales_date as tx_date,
-    s.created_at created_at
+    s.created_at created_at,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -46,7 +48,8 @@ SELECT
     sa.qty as adjustment_qty,
     null as usage_qty,
     sah.transaction_date as tx_date,
-    sah.created_at as created_at
+    sah.created_at as created_at,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -65,7 +68,8 @@ SELECT
     null as adjustment_qty,
     su.qty as usage_qty,
     suh.transaction_date as tx_date,
-    suh.created_at as created_at
+    suh.created_at as created_at,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -88,15 +92,16 @@ SELECT
     END as sales_qty,
     null as sales_total,
     CASE 
-        WHEN vt.adjustment_id is not null THEN vd.qty
+        WHEN vt.adjustment_id is not null THEN vd.qty * -1
         ELSE null
     END as adjustment_qty,
     CASE 
-        WHEN vt.usage_id is not null THEN vd.qty
+        WHEN vt.usage_id is not null THEN vd.qty * -1
         ELSE null
     END as usage_qty,
     vt.created_at as tx_date,
-    vt.created_at as created_at
+    vt.created_at as created_at,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1

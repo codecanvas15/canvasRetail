@@ -25,6 +25,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         // $schedule->command('inspire')->hourly();
+        $schedule->command('app:generate-report')->everyMinute()->appendOutputTo(storage_path('logs/report.log'));
     }
 
     /**

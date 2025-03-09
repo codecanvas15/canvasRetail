@@ -16,7 +16,8 @@ SELECT
     null as usage_date,
     null as usage_qty,
     pd.created_at as created_at,
-    p.doc_number as doc_number
+    p.doc_number as doc_number,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -43,7 +44,8 @@ SELECT
     null as usage_date,
     null as usage_qty,
     sd.created_at as created_at,
-    s.doc_number as doc_number
+    s.doc_number as doc_number,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -70,7 +72,8 @@ SELECT
     null as usage_date,
     null as usage_qty,
     sah.created_at as created_at,
-    sah.doc_number as doc_number
+    sah.doc_number as doc_number,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -97,7 +100,8 @@ SELECT
     suh.transaction_date as usage_date,
     su.qty as usage_qty,
     suh.created_at as created_at,
-    suh.doc_number as doc_number
+    suh.doc_number as doc_number,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
@@ -148,7 +152,7 @@ SELECT
             sah.id = vt.adjustment_id
     ) as adjustment_date,
     CASE 
-        WHEN vt.adjustment_id is not null THEN vd.qty
+        WHEN vt.adjustment_id is not null THEN vd.qty * -1
         ELSE null
     END as adjustment_qty,
     (
@@ -160,11 +164,12 @@ SELECT
             suh.id = vt.usage_id
     ) as usage_date,
     CASE 
-        WHEN vt.usage_id is not null THEN vd.qty
+        WHEN vt.usage_id is not null THEN vd.qty * -1
         ELSE null
     END as usage_qty,
     vt.created_at as created_at,
-    CONCAT('VOID', ' ', vt.ref_id) as doc_number
+    CONCAT('VOID', ' ', vt.ref_id) as doc_number,
+    l.id as location_id
 FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1

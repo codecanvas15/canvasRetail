@@ -269,9 +269,10 @@ class PaymentController extends Controller
 
         $id = explode(',', $request->sales_id);
 
-        if(Sales::whereIn('id', $id)->where('status',1)->exists())
+        $sales = Sales::whereIn('id', $id)->first();
+
+        if($sales != null)
         {
-            $sales = Sales::whereIn('id', $id)->where('status', 1)->first();
             $bank = Bank::where('id', $request->bank_id)->first();
 
             if ($bank == null)
@@ -285,9 +286,8 @@ class PaymentController extends Controller
             $contact = Contact::where('id', $sales->contact_id)->first();
             $paymentDet = DB::table('payment')
                 ->join('sales', 'sales.id', '=', 'payment.sales_id')
-                ->select('sales.id', 'sales.doc_number', 'sales.sales_date', DB::raw('SUM(payment.amount) as amount'), DB::raw('sales.amount - SUM(payment.amount) as outstanding'))
+                ->select('sales.id', 'sales.doc_number', 'sales.sales_date', DB::raw('SUM(payment.amount) as amount'), DB::raw('sales.amount - SUM(payment.amount) as outstanding', 'sales.status'))
                 ->whereIn('payment.sales_id', $id)
-                ->where('sales.status', 1)
                 ->groupBy('sales.id', 'sales.doc_number', 'sales.sales_date')
                 ->get();
 

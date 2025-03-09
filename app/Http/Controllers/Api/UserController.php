@@ -85,9 +85,9 @@ class UserController extends Controller
         $user = User::where('id', $request->user_id)->first();
 
         $user->update([
-            "name" => $request->name ?? auth()->user()->name,
-            "role" => $request->role ?? auth()->user()->role,
-            "password" => Hash::make($request->password) ?? auth()->user()->password,
+            "name" => $request->name ?? $user->name,
+            "role" => $request->role ?? $user->role,
+            "password" => Hash::make($request->password) ?? $user->password,
             "updated_by" => auth()->user()->id,
             "status" => 1,
         ]);

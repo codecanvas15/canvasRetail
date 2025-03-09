@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProcurementController;
 use App\Http\Controllers\Api\RefundController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SalesController;
 use App\Http\Controllers\Api\StockAdjustmentController;
 use App\Http\Controllers\Api\StockCardController;
@@ -38,107 +39,113 @@ Route::group([
     'middleware' => 'auth:api'
 ], function(){
     // auth
-    Route::get("refreshToken", [AuthController::class, "refreshToken"]);
-    Route::get("profile", [AuthController::class, "profile"]);
+    Route::get("refreshToken", [AuthController::class, "refreshToken"])->middleware('role:owner');
+    Route::get("profile", [AuthController::class, "profile"])->middleware('role:owner');
     
     // masters
     // User
-    Route::get("user", [UserController::class, "getUser"]);
-    Route::get("user/{id}", [UserController::class, "getUserById"]);
-    Route::post("user", [UserController::class, "addUser"]);
-    Route::post("user-update", [UserController::class, "updateUser"]);
-    Route::delete("user/{id}", [UserController::class, "deleteUser"]);
+    Route::get("user", [UserController::class, "getUser"])->middleware('role:owner,admin');
+    Route::get("user/{id}", [UserController::class, "getUserById"])->middleware('role:owner,admin');
+    Route::post("user", [UserController::class, "addUser"])->middleware('role:owner,admin');
+    Route::post("user-update", [UserController::class, "updateUser"])->middleware('role:owner,admin');
+    Route::delete("user/{id}", [UserController::class, "deleteUser"])->middleware('role:owner');
 
     // item
-    Route::post("item",[ItemController::class, "addItem"])->middleware('role:admin');
-    Route::get("item",[ItemController::class, "getItem"]);
-    Route::get("itemdetail",[ItemController::class, "getItemById"]);
-    Route::post("updateitem",[ItemController::class, "updateItem"])->middleware('role:admin');
-    Route::delete("item",[ItemController::class, "deleteItem"])->middleware('role:admin');
+    Route::post("item",[ItemController::class, "addItem"])->middleware('role:owner,admin');
+    Route::get("item",[ItemController::class, "getItem"])->middleware('role:owner,admin');
+    Route::get("itemdetail",[ItemController::class, "getItemById"])->middleware('role:owner,admin');
+    Route::post("updateitem",[ItemController::class, "updateItem"])->middleware('role:owner,admin');
+    Route::delete("item",[ItemController::class, "deleteItem"])->middleware('role:owner');
 
     // get categories
-    Route::get("categories",[ItemController::class, "getUniqueCategories"]);
+    Route::get("categories",[ItemController::class, "getUniqueCategories"])->middleware('role:owner,admin');
 
     // location
-    Route::post("location",[LocationController::class, "addLocation"]);
-    Route::get("location",[LocationController::class, "getLocation"]);
-    Route::get("location/{id}",[LocationController::class, "getLocationById"]);
-    Route::post("location/{id}",[LocationController::class, "updateLocation"]);
-    Route::delete("location/{id}",[LocationController::class, "deleteLocation"]);
+    Route::post("location",[LocationController::class, "addLocation"])->middleware('role:owner,admin');
+    Route::get("location",[LocationController::class, "getLocation"])->middleware('role:owner,admin');
+    Route::get("location/{id}",[LocationController::class, "getLocationById"])->middleware('role:owner,admin');
+    Route::post("location/{id}",[LocationController::class, "updateLocation"])->middleware('role:owner,admin');
+    Route::delete("location/{id}",[LocationController::class, "deleteLocation"])->middleware('role:owner');
 
     // tax
-    Route::post("tax",[TaxController::class, "addTax"]);
-    Route::get("tax",[TaxController::class, "getTax"]);
-    Route::get("tax/{id}",[TaxController::class, "getTaxById"]);
-    Route::post("tax/{id}",[TaxController::class, "updateTax"]);
-    Route::delete("tax/{id}",[TaxController::class, "deleteTax"]);
+    Route::post("tax",[TaxController::class, "addTax"])->middleware('role:owner,admin');
+    Route::get("tax",[TaxController::class, "getTax"])->middleware('role:owner,admin');
+    Route::get("tax/{id}",[TaxController::class, "getTaxById"])->middleware('role:owner,admin');
+    Route::post("tax/{id}",[TaxController::class, "updateTax"])->middleware('role:owner,admin');
+    Route::delete("tax/{id}",[TaxController::class, "deleteTax"])->middleware('role:owner');
 
     // contact
-    Route::post("contact",[ContactController::class, "addContact"]);
-    Route::get("contact",[ContactController::class, "getContact"]);
-    Route::get("contact/{id}",[ContactController::class, "getContactById"]);
-    Route::post("contact/{id}",[ContactController::class, "updateContact"]);
-    Route::delete("contact/{id}",[ContactController::class, "deleteContact"]);
+    Route::post("contact",[ContactController::class, "addContact"])->middleware('role:owner,admin');
+    Route::get("contact",[ContactController::class, "getContact"])->middleware('role:owner,admin');
+    Route::get("contact/{id}",[ContactController::class, "getContactById"])->middleware('role:owner,admin');
+    Route::post("contact/{id}",[ContactController::class, "updateContact"])->middleware('role:owner,admin');
+    Route::delete("contact/{id}",[ContactController::class, "deleteContact"])->middleware('role:owner');
 
     // bank
-    Route::post("bank", [BankController::class, "addBank"]);
-    Route::get("bank", [BankController::class, "getBank"]);
-    Route::get("bank/{id}", [BankController::class, "getBankById"]);
-    Route::post("bank/{id}", [BankController::class, "updateBank"]);
-    Route::delete("bank/{id}", [BankController::class, "deleteBank"]);
+    Route::post("bank", [BankController::class, "addBank"])->middleware('role:owner,admin');
+    Route::get("bank", [BankController::class, "getBank"])->middleware('role:owner,admin');
+    Route::get("bank/{id}", [BankController::class, "getBankById"])->middleware('role:owner,admin');
+    Route::post("bank/{id}", [BankController::class, "updateBank"])->middleware('role:owner,admin');
+    Route::delete("bank/{id}", [BankController::class, "deleteBank"])->middleware('role:owner');
 
     // transactions
     // procurement
-    Route::post("procurement", [ProcurementController::class, "addProcurement"]);
-    Route::post("procurement/{id}", [ProcurementController::class, "updateProcurement"]);
-    Route::get("procurement", [ProcurementController::class, "getProcurement"]);
-    Route::get("procurement/{id}", [ProcurementController::class, "getProcurementById"]);
-    Route::delete("procurement/{id}", [ProcurementController::class, "deleteProcurement"]);
-    Route::get("generatePo", [ProcurementController::class, "createPO"]);
-    Route::get("procurement-item-detail", [ProcurementController::class, "getItemProcurement"]);
-    Route::post("approve/procurement", [ProcurementController::class, "approveProcurement"]);
-    Route::post("void/procurement", [ProcurementController::class, "void"]);
+    Route::post("procurement", [ProcurementController::class, "addProcurement"])->middleware('role:owner,admin');
+    Route::post("procurement/{id}", [ProcurementController::class, "updateProcurement"])->middleware('role:owner,admin');
+    Route::get("procurement", [ProcurementController::class, "getProcurement"])->middleware('role:owner,admin');
+    Route::get("procurement/{id}", [ProcurementController::class, "getProcurementById"])->middleware('role:owner,admin');
+    Route::delete("procurement/{id}", [ProcurementController::class, "deleteProcurement"])->middleware('role:owner');
+    Route::get("generatePo", [ProcurementController::class, "createPO"])->middleware('role:owner,admin');
+    Route::get("procurement-item-detail", [ProcurementController::class, "getItemProcurement"])->middleware('role:owner,admin');
+    Route::post("approve/procurement", [ProcurementController::class, "approveProcurement"])->middleware('role:owner');
+    Route::post("void/procurement", [ProcurementController::class, "void"])->middleware('role:owner');
     
     // sales
-    Route::post("sales", [SalesController::class, "addSales"]);
-    Route::post("sales/{id}", [SalesController::class, "updateSales"]);
-    Route::get("sales", [SalesController::class, "getSales"]);
-    Route::get("sales/{id}", [SalesController::class, "getSalesById"]);
-    Route::delete("sales/{id}", [SalesController::class, "deleteSales"]);
-    Route::get("sales-item-detail", [SalesController::class, "getItemSales"]);
-    Route::get("faktur", [SalesController::class, "faktur"]);
-    Route::post("approve/sales", [SalesController::class, "approveSales"]);
-    Route::post("void/sales", [SalesController::class, "void"]);
+    Route::post("sales", [SalesController::class, "addSales"])->middleware('role:owner,admin');
+    Route::post("sales/{id}", [SalesController::class, "updateSales"])->middleware('role:owner,admin');
+    Route::get("sales", [SalesController::class, "getSales"])->middleware('role:owner,admin');
+    Route::get("sales/{id}", [SalesController::class, "getSalesById"])->middleware('role:owner,admin');
+    Route::delete("sales/{id}", [SalesController::class, "deleteSales"])->middleware('role:owner');
+    Route::get("sales-item-detail", [SalesController::class, "getItemSales"])->middleware('role:owner,admin');
+    Route::get("faktur", [SalesController::class, "faktur"])->middleware('role:owner,admin');
+    Route::post("approve/sales", [SalesController::class, "approveSales"])->middleware('role:owner');
+    Route::post("void/sales", [SalesController::class, "void"])->middleware('role:owner');
 
     // payment
-    Route::post("payment", [PaymentController::class, "payment"]);
-    Route::get("payment", [PaymentController::class, "getPayment"]);
-    Route::get("pay-receipt", [PaymentController::class, "payReceipt"]);
+    Route::post("payment", [PaymentController::class, "payment"])->middleware('role:owner,admin');
+    Route::get("payment", [PaymentController::class, "getPayment"])->middleware('role:owner,admin');
+    Route::get("pay-receipt", [PaymentController::class, "payReceipt"])->middleware('role:owner,admin');
 
     // refund
-    Route::post("refund", [RefundController::class, "refund"]);
-    Route::get("refund", [RefundController::class, "getRefund"]);
+    Route::post("refund", [RefundController::class, "refund"])->middleware('role:owner,admin');
+    Route::get("refund", [RefundController::class, "getRefund"])->middleware('role:owner,admin');
 
     // stock opname
     // stock adjustment
-    Route::post("stockadjustment", [StockAdjustmentController::class, "adjustment"]);
-    Route::get("stockadjustment", [StockAdjustmentController::class, "getAdjustment"]);
-    Route::get("stockadjustment/{id}", [StockAdjustmentController::class, "getAdjustmentDetail"]);
-    Route::post("stockadjustment/{id}", [StockAdjustmentController::class, "updateAdjustment"]);
-    // Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"]);
-    Route::post("approve/stockadjustment", [StockAdjustmentController::class, "approveAdjustment"]);
-    Route::post("void/stockadjustment", [StockAdjustmentController::class, "void"]);
+    Route::post("stockadjustment", [StockAdjustmentController::class, "adjustment"])->middleware('role:owner,admin');
+    Route::get("stockadjustment", [StockAdjustmentController::class, "getAdjustment"])->middleware('role:owner,admin');
+    Route::get("stockadjustment/{id}", [StockAdjustmentController::class, "getAdjustmentDetail"])->middleware('role:owner,admin');
+    Route::post("stockadjustment/{id}", [StockAdjustmentController::class, "updateAdjustment"])->middleware('role:owner,admin');
+    // Route::post("stockadjustment/reject/{id}", [StockAdjustmentController::class, "rejectAdjustment"])->middleware('role:owner');
+    Route::post("approve/stockadjustment", [StockAdjustmentController::class, "approveAdjustment"])->middleware('role:owner');
+    Route::post("void/stockadjustment", [StockAdjustmentController::class, "void"])->middleware('role:owner');
     
     // stock usage
-    Route::post("stockusage", [StockUsageController::class, "usage"]);
-    Route::get("stockusage", [StockUsageController::class, "getUsage"]);
-    Route::get("stockusage/{id}", [StockUsageController::class, "getUsageDetail"]);
-    Route::post("stockusage/{id}", [StockUsageController::class, "updateUsage"]);
-    // Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"]);
-    Route::post("approve/stockusage", [StockUsageController::class, "approveUsage"]);
-    Route::post("void/stockusage", [StockUsageController::class, "void"]);
+    Route::post("stockusage", [StockUsageController::class, "usage"])->middleware('role:owner,admin');
+    Route::get("stockusage", [StockUsageController::class, "getUsage"])->middleware('role:owner,admin');
+    Route::get("stockusage/{id}", [StockUsageController::class, "getUsageDetail"])->middleware('role:owner,admin');
+    Route::post("stockusage/{id}", [StockUsageController::class, "updateUsage"])->middleware('role:owner,admin');
+    // Route::post("stockusage/reject/{id}", [StockUsageController::class, "rejectUsage"])->middleware('role:owner');
+    Route::post("approve/stockusage", [StockUsageController::class, "approveUsage"])->middleware('role:owner');
+    Route::post("void/stockusage", [StockUsageController::class, "void"])->middleware('role:owner');
 
     // reports
+    Route::get("report/generate", [ReportController::class, "generateReport"]);
+    Route::get("report/procurement", [ReportController::class, "procurementReport"]);
+    Route::get("report/sales", [ReportController::class, "salesReport"]);
+    Route::get("report/stockcard", [ReportController::class, "stockCardReport"]);
+    Route::get("report/stockvalue", [ReportController::class, "stockValueReport"]);
+
     // stockcard
     Route::get("stockcardList", [StockCardController::class, "getStockCardList"]);
     Route::get("stockcardDetails", [StockCardController::class, "getStockCardDetails"]);

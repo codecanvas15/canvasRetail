@@ -3,6 +3,7 @@
 /public/storage
 /public/html
 /public/pdf
+/public/report
 /storage/*.key
 /vendor
 .env
