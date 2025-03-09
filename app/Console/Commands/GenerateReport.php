@@ -51,7 +51,7 @@ class GenerateReport extends Command
                 Log::channel('report')->info(' Generating Sales Report');
                 $this->salesReport($q);
             }
-            else if ($q->type == 'stockCard')
+            else if ($q->type == 'stockcard')
             {
                 Log::channel('report')->info(' Generating Stockcard Report');
                 $this->stockCardReport($q);
@@ -374,7 +374,7 @@ class GenerateReport extends Command
 
         $queue->update([
             'status' => 2,
-            'file' => url('report/procurement/' . $filename)
+            'file' => url('report/sales/' . $filename)
         ]);
 
         Log::channel('report')->info(' ' . url('report/sales/' . $filename));
@@ -618,7 +618,7 @@ class GenerateReport extends Command
 
         $queue->update([
             'status' => 2,
-            'file' => url('report/procurement/' . $filename)
+            'file' => url('report/stockcard/' . $filename)
         ]);
 
         Log::channel('report')->info(' ' . url('report/stockcard/' . $filename));
@@ -926,7 +926,7 @@ class GenerateReport extends Command
 
         $queue->update([
             'status' => 2,
-            'file' => url('report/procurement/' . $filename)
+            'file' => url('report/stockvalue/' . $filename)
         ]);
 
         Log::channel('report')->info(' ' . url('report/stockvalue/' . $filename));

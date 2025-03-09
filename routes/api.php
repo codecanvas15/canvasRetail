@@ -141,6 +141,7 @@ Route::group([
 
     // reports
     Route::get("report/generate", [ReportController::class, "generateReport"]);
+    Route::get("report/get", [ReportController::class, "getQueue"]);
     Route::get("report/procurement", [ReportController::class, "procurementReport"]);
     Route::get("report/sales", [ReportController::class, "salesReport"]);
     Route::get("report/stockcard", [ReportController::class, "stockCardReport"]);

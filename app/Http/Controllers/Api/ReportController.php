@@ -1142,4 +1142,38 @@ class ReportController extends Controller
             'file' => url('report/stockvalue/' . $filename)
         ]);
     }
+
+    public function getQueue(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'type' => 'in:procurement,sales,stockcard,stockvalue'
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        $query = ReportQueue::query();
+
+        if ($request->has('type') && $request->type) {
+            $query->where('type', $request->type);
+        }
+
+        $queue = $query->get();
+
+        return response()->json([
+            "status"    => true,
+            "data"      => $queue
+        ]);
+    }
 }
