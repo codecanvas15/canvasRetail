@@ -262,6 +262,14 @@ class SalesController extends Controller
             //     'pay_desc'      => "Initial Payment"
             // ]);
 
+            $description = "Create Sales\n
+            request : " . json_encode($request->all()) . "
+            response : Sales Success". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('sales', 'create sales', $description);
+
             DB::commit();
 
             $faktur = $this->generateFaktur($sales->id);
@@ -550,6 +558,14 @@ class SalesController extends Controller
                 'updated_at'    => date("Y-m-d H:i:s")
             ]);
 
+            $description = "Update Sales\n
+            request : " . json_encode($request->all()) . "
+            response : Sales Updated". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('sales', 'update sales', $description);
+
             DB::commit();
 
             $faktur = $this->generateFaktur($sales->id);
@@ -606,6 +622,14 @@ class SalesController extends Controller
                     'updated_by'    => auth()->user()->id,
                     'updated_at'    => date("Y-m-d H:i:s")
                 ]);
+                
+                $description = "Approve Sales\n
+            request : " . json_encode($request->all()) . "
+            response : Sales Rejected". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('sales', 'approve sales', $description);
     
                 DB::commit();
     
@@ -650,6 +674,14 @@ class SalesController extends Controller
                     ]);
                 }
             }
+
+            $description = "Approve Sales\n
+            request : " . json_encode($request->all()) . "
+            response : Sales Approved". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('sales', 'approve sales', $description);
     
             DB::commit();
             return response()->json([
@@ -928,6 +960,13 @@ class SalesController extends Controller
                 ]);
             }
 
+            $description = "delete Sales " . $id . " \n
+            response : Sales deleted". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('sales', 'delete sales', $description);
+
             return response()->json([
                 "status"    => true,
                 "message" => "Sales deleted"
@@ -1172,6 +1211,14 @@ class SalesController extends Controller
                     'status'        => 1
                 ]);
             }
+
+            $description = "Void Sales\n
+            request : " . json_encode($request->all()) . "
+            response : Sales Voided". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('sales', 'void sales', $description);
 
             DB::commit();
 

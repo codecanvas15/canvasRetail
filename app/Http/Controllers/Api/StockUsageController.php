@@ -140,6 +140,14 @@ class StockUsageController extends Controller
                 ], 404);
             }
 
+            $description = "Create Stock Usage\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Usage Success". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_usage', 'create stock usage', $description);
+
             DB::commit();
 
             return response()->json([
@@ -200,6 +208,14 @@ class StockUsageController extends Controller
                     'updated_by'    => auth()->user()->id,
                     'updated_at'    => date("Y-m-d H:i:s")
                 ]);
+
+                $description = "Approve Stock Usage\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Usage Rejected". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_usage', 'approve stock usage', $description);
     
                 DB::commit();
     
@@ -242,6 +258,14 @@ class StockUsageController extends Controller
                     ]);
                 }
             }
+
+            $description = "Approve Stock Usage\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Usage Approved". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_usage', 'approve stock usage', $description);
     
             DB::commit();
     
@@ -508,6 +532,14 @@ class StockUsageController extends Controller
                 }
             }
 
+            $description = "Update Stock Usage\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Usage Updated". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_usage', 'update stock usage', $description);
+
             DB::commit();
             return response()->json([
                 "status" => true,
@@ -602,6 +634,14 @@ class StockUsageController extends Controller
                     'status'        => 1
                 ]);
             }
+
+            $description = "Void Stock Usage\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Usage Voided". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_usage', 'void stock usage', $description);
 
             DB::commit();
 

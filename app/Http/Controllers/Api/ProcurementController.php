@@ -30,8 +30,7 @@ class ProcurementController extends Controller
             "contact_id"        => "required",
             "location_id"       => "required",
             "items"             => "required",
-            "procurement_date"  => "required",
-            "pay_amount"        => "required"
+            "procurement_date"  => "required"
         ]);
 
         if ($validator->fails()) {
@@ -287,6 +286,14 @@ class ProcurementController extends Controller
             //     'pay_desc'      => "Initial Payment"
             // ]);
 
+            $description = "Create Procurement\n
+            request : " . json_encode($request->all()) . "
+            response : Procurement Success". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('procurement', 'create procurement', $description);
+
             DB::commit();
 
             return response()->json([
@@ -346,6 +353,14 @@ class ProcurementController extends Controller
                     'updated_by'    => auth()->user()->id,
                     'updated_at'    => date("Y-m-d H:i:s")
                 ]);
+
+                $description = "Approve Procurement\n
+                request : " . json_encode($request->all()) . "
+                response : Procurement Rejected". "\n
+                on " . date("Y-m-d H:i:s") . "
+                by " . auth()->user()->username;
+
+                $this->history('procurement', 'approve procurement', $description);
     
                 DB::commit();
     
@@ -388,6 +403,13 @@ class ProcurementController extends Controller
                     ]);
                 }
             }
+
+            $description = "Approve Procurement\n
+            request : " . json_encode($request->all()) . "
+            response : Procurement Approved". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+            $this->history('procurement', 'approve procurement', $description);
     
             DB::commit();
     
@@ -639,6 +661,14 @@ class ProcurementController extends Controller
                     'updated_at'    => date("Y-m-d H:i:s"),
                     'tax'           => implode('|', $totalTax)
                 ]);
+
+                $description = "Update Procurement\n
+                request : " . json_encode($request->all()) . "
+                response : Procurement Updated". "\n
+                on " . date("Y-m-d H:i:s") . "
+                by " . auth()->user()->username;
+
+                $this->history('procurement', 'update procurement', $description);
     
                 DB::commit();
                 return response()->json([
@@ -744,6 +774,14 @@ class ProcurementController extends Controller
                     'status'        => 1
                 ]);
             }
+
+            $description = "Void Procurement\n
+            request : " . json_encode($request->all()) . "
+            response : Procurement Voided". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('procurement', 'void procurement', $description);
 
             DB::commit();
 
@@ -1013,6 +1051,13 @@ class ProcurementController extends Controller
                 ]);
             }
 
+            $description = "Delete Procurement " . $id ."\n
+            response : Procurement Deleted". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('procurement', 'delete procurement', $description);
+
             return response()->json([
                 "status"    => true,
                 "message" => "Procurement deleted"
@@ -1025,21 +1070,5 @@ class ProcurementController extends Controller
                 "message" => "Procurement not found"
             ], 404);
         }
-    }
-
-    public function procurementReport(Request $request)
-    {
-        
-    }
-
-    public function createDocs(Request $request)
-    {
-        $path = public_path() . '/pdf/' . time() . '.pdf';
-
-        $pdf = PDF::loadView('pdf');
-
-        $pdf->save($path);
-
-        return response()->download($path);
     }
 }

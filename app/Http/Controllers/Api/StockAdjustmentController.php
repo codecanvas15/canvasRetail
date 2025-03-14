@@ -144,6 +144,14 @@ class StockAdjustmentController extends Controller
                 ], 404);
             }
 
+            $description = "Create Stock Adjustment\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Adjustment Success". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_adjustment', 'create stock adjustment', $description);
+
             DB::commit();
 
             return response()->json([
@@ -203,6 +211,14 @@ class StockAdjustmentController extends Controller
                     'updated_by'    => auth()->user()->id,
                     'updated_at'    => date("Y-m-d H:i:s")
                 ]);
+
+                $description = "Approve Stock Adjustment\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Adjustment Rejected". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_adjustment', 'approve stock adjustment', $description);
     
                 DB::commit();
     
@@ -245,6 +261,14 @@ class StockAdjustmentController extends Controller
                     ]);
                 }
             }
+
+            $description = "Approve Stock Adjustment\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Adjustment Approved". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_adjustment', 'approve stock adjustment', $description);
     
             DB::commit();
     
@@ -530,6 +554,14 @@ class StockAdjustmentController extends Controller
                 }
             }
 
+            $description = "Update Stock Adjustment\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Adjustment Updated". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_adjustment', 'update stock adjustment', $description);
+
             DB::commit();
             return response()->json([
                 "status" => true,
@@ -624,6 +656,14 @@ class StockAdjustmentController extends Controller
                     'status'        => 1
                 ]);
             }
+
+            $description = "Void Stock Adjustment\n
+            request : " . json_encode($request->all()) . "
+            response : Stock Adjustment Voided". "\n
+            on " . date("Y-m-d H:i:s") . "
+            by " . auth()->user()->username;
+
+            $this->history('stock_adjustment', 'void stock adjustment', $description);
 
             DB::commit();
 
