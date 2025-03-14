@@ -975,9 +975,9 @@ class SalesController extends Controller
 
         $id = $request->sales_id;
 
-        if(Sales::where('id', $id)->whereIn('status', [1,2,3])->exists())
+        if(Sales::where('id', $id)->whereIn('status', [1,2,3,4])->exists())
         {
-            $sales = Sales::where('id', $id)->whereIn('status', [1,2,3])->first();
+            $sales = Sales::where('id', $id)->whereIn('status', [1,2,3,4])->first();
 
             $contact = Contact::where('id', $sales->contact_id)->first();
 
@@ -1037,9 +1037,9 @@ class SalesController extends Controller
 
     public function generateFaktur($id)
     {
-        if(Sales::where('id', $id)->whereIn('status', [1,2,3])->exists())
+        if(Sales::where('id', $id)->whereIn('status', [1,2,3,4])->exists())
         {
-            $sales = Sales::where('id', $id)->whereIn('status', [1,2,3])->first();
+            $sales = Sales::where('id', $id)->whereIn('status', [1,2,3,4])->first();
 
             $contact = Contact::where('id', $sales->contact_id)->first();
 

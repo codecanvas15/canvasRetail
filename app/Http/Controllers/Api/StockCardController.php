@@ -52,6 +52,13 @@ class StockCardController extends Controller
             $filterEndDate = $endDate->format('Y-m-d');
         }
 
+        $locationCondition = '';
+        $locationParams = [];
+        if ($request->location_id) {
+            $locationCondition = 'AND a.location_id = ?';
+            $locationParams[] = $request->location_id;
+        }
+
         Config::set('database.connections.'. config('database.default') .'.strict', false);
         DB::reconnect();
 
@@ -79,15 +86,16 @@ class StockCardController extends Controller
                     or a.sales_date >= ?
                     or a.adjustment_date >= ?
                     or a.usage_date >= ?
-                ) AND
-                (
+                ) 
+                AND (
                     a.procurement_date <= ?
                     or a.sales_date <= ?
                     or a.adjustment_date <= ?
                     or a.usage_date <= ?
                 )
+                $locationCondition
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
-        ", [$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate]);
+        ", array_merge([$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate], $locationParams));
 
         $stockAwal = DB::select("
             SELECT
@@ -99,8 +107,9 @@ class StockCardController extends Controller
                 stock_value_sum a
             WHERE
                 a.tx_date < ?
+                $locationCondition
             ORDER BY a.item_code, a.created_at
-        ", [$filterStartDate]);
+        ", array_merge([$filterStartDate], $locationParams));
 
         $items = Item::where('status', 1)->paginate(10); // Add pagination here
 
@@ -280,6 +289,14 @@ class StockCardController extends Controller
             $filterEndDate = $endDate->format('Y-m-d');
         }
 
+        $locationCondition = '';
+        $locationParams = [];
+        if ($request->location_id) 
+        {
+            $locationCondition = 'AND a.location_id = ?';
+            $locationParams[] = $request->location_id;
+        }
+
         Config::set('database.connections.'. config('database.default') .'.strict', false);
         DB::reconnect();
 
@@ -316,8 +333,9 @@ class StockCardController extends Controller
                     or a.adjustment_date <= ?
                     or a.usage_date <= ?
                 )
+                $locationCondition
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", [$request->item_code, $filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate]);
+        ", array_merge([$request->item_code,$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate], $locationParams));
 
         $stockAwal = DB::select("
             SELECT
@@ -329,8 +347,9 @@ class StockCardController extends Controller
             WHERE
                 a.tx_date < ?
                 AND a.item_code = ?
+                $locationCondition
             ORDER BY a.item_code, a.created_at
-        ", [$filterStartDate, $request->item_code]);
+        ", array_merge([$filterStartDate, $request->item_code], $locationParams));
 
         $result = [];
 
