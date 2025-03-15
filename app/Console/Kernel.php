@@ -26,6 +26,7 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
         $schedule->command('app:generate-report')->everyMinute()->appendOutputTo(storage_path('logs/report.log'));
+        $schedule->command('logs:rotate')->dailyAt('00:00');
     }
 
     /**
