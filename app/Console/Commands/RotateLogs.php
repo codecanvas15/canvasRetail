@@ -13,12 +13,12 @@ class RotateLogs extends Command
 
     public function handle()
     {
-        $logPath = storage_path('logs/laravel.log');
+        $logPath = storage_path('logs/generateReport.log');
         // $maxSize = 1;
         $maxSize = 10 * 1024 * 1024;
 
         if (File::exists($logPath) && File::size($logPath) > $maxSize) {
-            $archivePath = storage_path('logs/laravel-' . Carbon::now()->format('Y-m-d_H-i-s') . '.log');
+            $archivePath = storage_path('logs/generateReport-' . Carbon::now()->format('Y-m-d_H-i-s') . '.log');
 
             // Move the log file to an archive file
             File::move($logPath, $archivePath);
