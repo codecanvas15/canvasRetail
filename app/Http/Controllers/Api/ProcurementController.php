@@ -148,6 +148,7 @@ class ProcurementController extends Controller
                 'include_tax'           => $request->include_tax == 1 ? true : false,
                 'rounding'              => (float)($request->round),
                 'external_doc_no'       => $request->external_doc_no,
+                'location_id'           => $request->location_id
             ]);
 
             foreach ($request->items as $item)
