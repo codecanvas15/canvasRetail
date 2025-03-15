@@ -70,8 +70,9 @@ class GenerateReport extends Command
     {
         $startProcurementDate = $queue->start_date;
         $endProcurementDate = $queue->end_date;
+        $locationId = $queue->location_id;
 
-        $report = DB::table('procurements')
+        $query = DB::table('procurements')
             ->join('procurement_details', 'procurements.id', '=', 'procurement_details.procurement_id')
             ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
             ->join('items', 'items_details.item_code', '=', 'items.item_code')
@@ -79,8 +80,15 @@ class GenerateReport extends Command
             ->join('locations', 'items_details.location_id', '=', 'locations.id')
             ->select('contacts.name as vendor', 'items.name as item_name', 'items.item_code', 'procurements.procurement_date', 'procurements.doc_number', 'procurements.external_doc_no', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.total', 'procurement_details.tax_ids', 'procurement_details.discount', 'locations.name as location', 'procurements.include_tax', 'procurement_details.initial_price', 'procurements.rounding')
             ->where('procurements.status', 2)
-            ->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate])
-            ->get();
+            ->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
+
+
+        if ($locationId != null)
+        {
+            $query->where('procurements.location_id', $locationId);
+        }
+
+        $report = $query->get();
 
         foreach($report as $key => $value)
         {
@@ -243,8 +251,9 @@ class GenerateReport extends Command
 
         $startSalesDate = $queue->start_date;
         $endSalesDate = $queue->end_date;
+        $locationId = $queue->location_id;
 
-        $report = DB::table('sales')
+        $query = DB::table('sales')
             ->join('sales_details', 'sales.id', '=', 'sales_details.sales_id')
             ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
             ->join('items', 'items_details.item_code', '=', 'items.item_code')
@@ -252,8 +261,14 @@ class GenerateReport extends Command
             ->join('locations', 'items_details.location_id', '=', 'locations.id')
             ->select('contacts.name as customer', 'items.name as item_name', 'items.item_code', 'sales.sales_date', 'sales.doc_number', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'locations.name as location', 'sales_details.initial_price', 'sales.rounding')
             ->where('sales.status', 2)
-            ->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate])
-            ->get();
+            ->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
+        
+        if ($locationId != null)
+        {
+            $query->where('procurements.location_id', $locationId);
+        }
+
+        $report = $query->get();
             
         foreach($report as $key => $value)
         {
@@ -389,6 +404,14 @@ class GenerateReport extends Command
         $startDate = $queue->start_date;
         $endDate = $queue->end_date;
 
+        $locationCondition = '';
+        $locationParams = [];
+        if ($queue->location_id != null) 
+        {
+            $locationCondition = 'AND a.location_id = ?';
+            $locationParams[] = $queue->location_id;
+        }
+
         $item = Item::where('status', 1)->get();
 
         $stock = DB::select("
@@ -427,8 +450,9 @@ class GenerateReport extends Command
                     or a.adjustment_date <= ?
                     or a.usage_date <= ?
                 )
+                $locationCondition
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", [$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate]);
+        ", array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate], $locationParams));
 
         $stockAwal = DB::select("
             SELECT
@@ -439,8 +463,9 @@ class GenerateReport extends Command
                 stock_value_sum a
             WHERE
                 a.tx_date < ?
+                $locationCondition
             ORDER BY a.item_code, a.created_at
-        ", [$startDate]);
+        ", array_merge([$startDate], $locationParams));
 
         $stockAwal = collect($stockAwal)->groupBy('item_code');
         $stock = collect($stock)->groupBy('item_code');
@@ -632,6 +657,14 @@ class GenerateReport extends Command
 
         $startDate = $queue->start_date;
         $endDate = $queue->end_date;
+        
+        $locationCondition = '';
+        $locationParams = [];
+        if ($queue->location_id != null) 
+        {
+            $locationCondition = 'AND a.location_id = ?';
+            $locationParams[] = $queue->location_id;
+        }
 
         $items = Item::where('status', 1)->get();
 
@@ -671,8 +704,9 @@ class GenerateReport extends Command
                     or a.adjustment_date <= ?
                     or a.usage_date <= ?
                 )
+                $locationCondition
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", [$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate]);
+        ", array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate], $locationParams));
 
         $stockAwal = DB::select("
             SELECT
@@ -683,8 +717,9 @@ class GenerateReport extends Command
                 stock_value_sum a
             WHERE
                 a.tx_date < ?
+                $locationCondition
             ORDER BY a.item_code, a.created_at
-        ", [$startDate]);
+        ", array_merge([$startDate], $locationParams));
 
         $stockAwal = collect($stockAwal)->groupBy('item_code');
         $stock = collect($stock)->groupBy('item_code');

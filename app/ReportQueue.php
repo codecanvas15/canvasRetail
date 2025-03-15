@@ -16,6 +16,7 @@ class ReportQueue extends Model
         'start_date',
         'end_date',
         'status',
-        'file'
+        'file',
+        'location_id'
     ];
 }

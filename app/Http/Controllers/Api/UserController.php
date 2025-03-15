@@ -28,7 +28,8 @@ class UserController extends Controller
             "username" => "required|unique:users",
             "name" => "required",
             "role" => "required",
-            "password" => "required"
+            "password" => "required",
+            "location_ids" => "required"
         ]);
 
         if ($validator->fails()) {
@@ -53,6 +54,7 @@ class UserController extends Controller
             "created_by" => auth()->user()->id,
             "updated_by" => auth()->user()->id,
             "status" => 1,
+            "location_id" => $request->location_ids
         ]);
 
         // Response
@@ -90,6 +92,7 @@ class UserController extends Controller
             "password" => Hash::make($request->password) ?? $user->password,
             "updated_by" => auth()->user()->id,
             "status" => 1,
+            "location_id" => $request->location_ids ?? $user->location_id
         ]);
 
         // Response

@@ -46,6 +46,7 @@ class ReportController extends Controller
             'type' => $request->type,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
+            'location_id' => $request->location_id,
             'status' => 1,
         ]);
 
@@ -99,6 +100,11 @@ class ReportController extends Controller
         if ($startProcurementDate && $endProcurementDate) 
         {
             $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
+        }
+
+        if ($request->location_id)
+        {
+            $query->where('procurements.location_id', $request->location_id);
         }
         // Get the raw SQL query and bindings
         // $rawSql = $query->toSql();
@@ -372,6 +378,12 @@ class ReportController extends Controller
         {
             $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
         }
+
+        if ($request->location_id)
+        {
+            $query->where('sales.location_id', $request->location_id);
+        }
+
         // $rawSql = $query->toSql();
         // $bindings = $query->getBindings();
 
@@ -572,6 +584,13 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', null);
         $endDate = $request->input('end_date', null);
 
+        $locationCondition = '';
+        $locationParams = [];
+        if ($request->location_id) {
+            $locationCondition = 'AND a.location_id = ?';
+            $locationParams[] = $request->location_id;
+        }
+
         if ($startDate > $endDate) {
             return response()->json([
                 "status" => false,
@@ -617,8 +636,9 @@ class ReportController extends Controller
                     or a.adjustment_date <= ?
                     or a.usage_date <= ?
                 )
+                $locationCondition
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", [$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate]);
+        ", array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate], $locationParams));
 
         $stockAwal = DB::select("
             SELECT
@@ -629,8 +649,9 @@ class ReportController extends Controller
                 stock_value_sum a
             WHERE
                 a.tx_date < ?
+                $locationCondition
             ORDER BY a.item_code, a.created_at
-        ", [$startDate]);
+        ", array_merge([$startDate], $locationParams));
 
         $stockAwal = collect($stockAwal)->groupBy('item_code');
         $stock = collect($stock)->groupBy('item_code');
@@ -838,6 +859,13 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', null);
         $endDate = $request->input('end_date', null);
 
+        $locationCondition = '';
+        $locationParams = [];
+        if ($request->location_id) {
+            $locationCondition = 'AND a.location_id = ?';
+            $locationParams[] = $request->location_id;
+        }
+
         if ($startDate > $endDate) {
             return response()->json([
                 "status" => false,
@@ -883,8 +911,9 @@ class ReportController extends Controller
                     or a.adjustment_date <= ?
                     or a.usage_date <= ?
                 )
+                $locationCondition
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", [$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate]);
+        ", array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate], $locationParams));
 
         $stockAwal = DB::select("
             SELECT
@@ -895,8 +924,9 @@ class ReportController extends Controller
                 stock_value_sum a
             WHERE
                 a.tx_date < ?
+                $locationCondition
             ORDER BY a.item_code, a.created_at
-        ", [$startDate]);
+        ", array_merge([$startDate], $locationParams));
 
         $stockAwal = collect($stockAwal)->groupBy('item_code');
         $stock = collect($stock)->groupBy('item_code');
