@@ -39,28 +39,37 @@ class GenerateReport extends Command
 
         $queue = ReportQueue::where('status',1)->get();
         
-        foreach($queue as $q)
+        try {
+            foreach($queue as $q)
+            {
+                if ($q->type == 'procurement')
+                {
+                    Log::channel('report')->info(' Generating Procurement Report');
+                    $this->procurementReport($q);
+                }
+                else if ($q->type == 'sales')
+                {
+                    Log::channel('report')->info(' Generating Sales Report');
+                    $this->salesReport($q);
+                }
+                else if ($q->type == 'stockcard')
+                {
+                    Log::channel('report')->info(' Generating Stockcard Report');
+                    $this->stockCardReport($q);
+                }
+                else if ($q->type == 'stockvalue')
+                {
+                    Log::channel('report')->info(' Generating Stockvalue Report');
+                    $this->stockValueReport($q);
+                }
+            }
+        }
+        catch (\Throwable $e)
         {
-            if ($q->type == 'procurement')
-            {
-                Log::channel('report')->info(' Generating Procurement Report');
-                $this->procurementReport($q);
-            }
-            else if ($q->type == 'sales')
-            {
-                Log::channel('report')->info(' Generating Sales Report');
-                $this->salesReport($q);
-            }
-            else if ($q->type == 'stockcard')
-            {
-                Log::channel('report')->info(' Generating Stockcard Report');
-                $this->stockCardReport($q);
-            }
-            else if ($q->type == 'stockvalue')
-            {
-                Log::channel('report')->info(' Generating Stockvalue Report');
-                $this->stockValueReport($q);
-            }
+            $errorMessage = now() . ' ' . $e->getMessage();
+            Log::channel('report')->error($errorMessage);
+            Log::channel('report')->error($e->getTraceAsString());
+            return $errorMessage;
         }
 
         Log::channel('report')->info(' DONE');
