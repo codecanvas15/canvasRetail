@@ -234,6 +234,8 @@ class PaymentController extends Controller
             'sort_order' => $sortOrder,
         ]);
 
+        $payment->appends($request->all());
+
         return response()->json([
             'status' => true,
             'data' => $payment->items(),

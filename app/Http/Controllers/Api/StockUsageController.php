@@ -353,6 +353,8 @@ class StockUsageController extends Controller
             'sort_order' => $sortOrder,
         ]);
 
+        $stockUsage->appends($request->all());
+
         return response()->json([
             'status' => true,
             'data' => $stockUsage->items(),

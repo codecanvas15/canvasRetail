@@ -163,6 +163,8 @@ class ReportController extends Controller
                 $report[$key]->total = round(($itemPrice + $report[$key]->ppn + $report[$key]->other_tax) * $value->qty, 2);
             }
 
+            $report->appends($request->all());
+
             return response()->json([
                 'status' => true,
                 'data' => $report->items(),
@@ -416,6 +418,8 @@ class ReportController extends Controller
                 $report[$key]->subtotal = round($value->price * $value->qty, 2);
                 $report[$key]->total = round(($value->price + $report[$key]->ppn + $report[$key]->other_tax) * $value->qty, 2);
             }
+
+            $report->appends($request->all());
 
             return response()->json([
                 'status' => true,

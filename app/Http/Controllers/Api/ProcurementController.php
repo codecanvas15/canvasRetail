@@ -882,6 +882,8 @@ class ProcurementController extends Controller
             'sort_order' => $sortOrder,
         ]);
 
+        $procurement->appends($request->all());
+
         return response()->json([
             'status' => true,
             'data' => $procurement->items(),

@@ -790,6 +790,8 @@ class SalesController extends Controller
             'sort_order' => $sortOrder,
         ]);
 
+        $sales->appends($request->all());
+
         return response()->json([
             'status' => true,
             'data' => $sales->items(),

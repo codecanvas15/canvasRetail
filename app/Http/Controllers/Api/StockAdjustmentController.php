@@ -356,6 +356,8 @@ class StockAdjustmentController extends Controller
             'sort_order' => $sortOrder,
         ]);
 
+        $stockAdjustment->appends($request->all());
+
         return response()->json([
             'status' => true,
             'data' => $stockAdjustment->items(),

@@ -238,6 +238,8 @@ class StockCardController extends Controller
             ];
         }
 
+        $items->appends($request->all());
+
         return response()->json([
             "status" => true,
             "data" => $stockList,
