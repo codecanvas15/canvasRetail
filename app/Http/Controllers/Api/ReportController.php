@@ -1201,6 +1201,13 @@ class ReportController extends Controller
             $query->where('type', $request->type);
         }
 
+        if ($request->location_id)
+        {
+            $query->where('location_id', $request->location_id);
+        }
+
+        $query->orderBy('created_at', 'desc');
+
         $queue = $query->get();
 
         return response()->json([
