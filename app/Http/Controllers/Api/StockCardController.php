@@ -479,8 +479,10 @@ class StockCardController extends Controller
                 $result[$i]['items'][] = [
                     'transaction_date' => $item[$j]->tx_date,
                     'doc_number' => $item[$j]->doc_number,
-                    'saldo_keluar' => $saldoKeluar,
-                    'saldo_masuk' => $saldoMasuk,
+                    'qty_keluar' => $saldoKeluar,
+                    'saldo_keluar' => $value * $saldoKeluar,
+                    'qty_masuk' => $saldoMasuk,
+                    'saldo_masuk' => $value * $saldoMasuk,
                     'value' => sprintf("%01.2f", $value),
                     'saldo_qty' => $saldoQty,
                     'saldo_nominal' => sprintf("%01.2f", $saldoNominal),

@@ -368,9 +368,9 @@ class StockUsageController extends Controller
 
     public function getUsageDetail($id)
     {
-        if(StockUsageHeader::where('id', $id)->where('status',1)->exists())
+        if(StockUsageHeader::where('id', $id)->exists())
         {
-            $usg = StockUsageHeader::where('id', $id)->where('status', 1)->first();
+            $usg = StockUsageHeader::where('id', $id)->first();
 
             $usgDet = DB::table('stock_usage')
                             ->join('items_details', 'stock_usage.item_detail_id', '=', 'items_details.id')

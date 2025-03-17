@@ -371,9 +371,9 @@ class StockAdjustmentController extends Controller
 
     public function getAdjustmentDetail($id)
     {
-        if(StockAdjustmentHeader::where('id', $id)->where('status',1)->exists())
+        if(StockAdjustmentHeader::where('id', $id)->exists())
         {
-            $adj = StockAdjustmentHeader::where('id', $id)->where('status', 1)->first();
+            $adj = StockAdjustmentHeader::where('id', $id)->first();
 
             $adjDet = DB::table('stock_adjustment')
                             ->join('items_details', 'stock_adjustment.item_detail_id', '=', 'items_details.id')
