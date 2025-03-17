@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Location;
 use Illuminate\Http\Request;
 use App\User;
 use Illuminate\Support\Facades\Hash;
@@ -83,7 +84,14 @@ class AuthController extends Controller
             "password" => $request->password
         ]);
 
+        // get location
+        
         if(!empty($token)){
+            $location = [];
+            if (auth()->user()->location_id != null)
+            {
+                $location = Location::wherein('id', explode(',', auth()->user()->location_id))->select('id', 'name')->get();
+            }
 
             return response()->json([
                 "status"    => true,
@@ -92,7 +100,8 @@ class AuthController extends Controller
                 "profile"   => [
                     "username"  => auth()->user()->username,
                     "name"      => auth()->user()->name,
-                    "role"      => auth()->user()->role
+                    "role"      => auth()->user()->role,
+                    "location"  => $location
                 ]
             ]);
         }
