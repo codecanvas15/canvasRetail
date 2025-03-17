@@ -1193,7 +1193,9 @@ class ReportController extends Controller
             ], 400);
         }
 
-        $query = ReportQueue::query();
+        $query = ReportQueue::query()
+        ->leftJoin('locations', 'report_queue.location_id', '=', 'locations.id')
+        ->select('report_queue.*', 'locations.name as location_name');
 
         if ($request->has('type') && $request->type) {
             $query->where('type', $request->type);
