@@ -265,7 +265,7 @@ class GenerateReport extends Command
         
         if ($locationId != null)
         {
-            $query->where('procurements.location_id', $locationId);
+            $query->where('sales.location_id', $locationId);
         }
 
         $report = $query->get();
