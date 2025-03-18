@@ -478,6 +478,9 @@ class StockCardController extends Controller
                     $saldoNominal -= $value * $saldoKeluar;
                 }
 
+                $saldoKeluar = $saldoKeluar < 0 ? ($saldoKeluar * -1) : $saldoKeluar;
+                $saldoMasuk = $saldoMasuk < 0 ? ($saldoMasuk * -1) : $saldoMasuk;
+
                 $result[$i]['items'][] = [
                     'transaction_date' => $item[$j]->tx_date,
                     'doc_number' => $item[$j]->doc_number,
