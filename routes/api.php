@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\TaxController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProcurementController;
 use App\Http\Controllers\Api\RefundController;
@@ -150,6 +151,11 @@ Route::group([
     // stockcard
     Route::get("stockcardList", [StockCardController::class, "getStockCardList"]);
     Route::get("stockcardDetails", [StockCardController::class, "getStockCardDetails"]);
+
+    // dashboard
+    // Route::get("dashboard/sumary", [DashboardController::class, "monthlySummary"]);
+    // Route::get("dashboard/latest-transaction", [DashboardController::class, "getLatestTransaction"]);
+    Route::get("dashboard", [DashboardController::class, "dashboard"]);
 
 });
 
