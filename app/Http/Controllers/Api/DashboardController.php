@@ -193,8 +193,8 @@ class DashboardController extends Controller
     public function getBestSeller()
     {
         $date = new DateTime('now');
-        $startDate = $date->modify('first day of this Month')->format('Y-m-d');
-        $endDate = $date->modify('last day of this Month')->format('Y-m-d');
+        $endDate = $date->format('Y-m-d'); // Today's date
+        $startDate = $date->modify('-1 month')->format('Y-m-d'); // 1 month before today
 
         $bestSellers = DB::select("
             SELECT
