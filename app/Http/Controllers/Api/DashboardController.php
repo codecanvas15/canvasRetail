@@ -19,10 +19,10 @@ class DashboardController extends Controller
         $endDate = $date->modify('last day of this Month')->format('Y-m-d');
 
         $sales = Sales::whereBetween('sales_date', [$startDate, $endDate])->where('status', 2);
-        $salesSum = $sales->sum('amount');
+        $salesSum = number_format($sales->sum('amount'), 2, ',', '.');
 
         $procurement = Procurement::whereBetween('procurement_date', [$startDate, $endDate])->where('status', 2);
-        $procurementSum = $procurement->sum('amount');
+        $procurementSum = number_format($procurement->sum('amount'), 2, ',', '.');
 
         $totalTransaction = $procurement->count() + $sales->count();
 
@@ -48,7 +48,7 @@ class DashboardController extends Controller
                         s.doc_number,
                         s.sales_date as transaction_date,
                         c.name,
-                        s.amount,
+                        FORMAT(s.amount, 2) as amount,
                         CASE
                             WHEN s.status = 1 THEN 'PENDING'
                             WHEN s.status = 2 THEN 'APPROVED'
@@ -65,7 +65,7 @@ class DashboardController extends Controller
                         p.doc_number,
                         p.procurement_date as transaction_date,
                         c.name,
-                        p.amount,
+                        FORMAT(p.amount, 2) as amount,
                         CASE
                             WHEN p.status = 1 THEN 'PENDING'
                             WHEN p.status = 2 THEN 'APPROVED'
@@ -138,6 +138,91 @@ class DashboardController extends Controller
                 'transaction_summary' => $monthlySum,
                 'transaction' => $transaction
             ]
+        ]);
+    }
+
+    public function transactionSum()
+    {
+        $date = new DateTime('now');
+        $endDate = $date->modify('last day of this Month')->format('Y-m-d');
+        $startDate = $date->modify('-6 months')->format('Y-m-d');
+
+        $summary = DB::select("
+            SELECT
+                sales.month,
+                IFNULL(sales.transaction_count, 0) as sales_total,
+                FORMAT(IFNULL(sales.total_amount, 0), 2) as sales_value,
+                IFNULL(procurement.transaction_count, 0) as procurement_total,
+                FORMAT(IFNULL(procurement.total_amount, 0), 2) as procurement_value
+            FROM
+                (
+                    SELECT
+                        DATE_FORMAT(sales_date, '%b-%Y') as month,
+                        COUNT(*) as transaction_count,
+                        SUM(amount) as total_amount
+                    FROM
+                        sales
+                    WHERE
+                        sales_date BETWEEN ? AND ?
+                    GROUP BY
+                        DATE_FORMAT(sales_date, '%b-%Y')
+                ) sales
+                LEFT JOIN
+                (
+                    SELECT
+                        DATE_FORMAT(procurement_date, '%b-%Y') as month,
+                        COUNT(*) as transaction_count,
+                        SUM(amount) as total_amount
+                    FROM
+                        procurements
+                    WHERE
+                        procurement_date BETWEEN ? AND ?
+                    GROUP BY
+                        DATE_FORMAT(procurement_date, '%b-%Y')
+                ) procurement ON sales.month = procurement.month
+            ORDER BY
+                sales.month ASC
+        ", [$startDate, $endDate, $startDate, $endDate]);
+
+        return response()->json([
+            'status' => true,
+            'data' => $summary
+        ]);
+    }
+
+    public function getBestSeller()
+    {
+        $date = new DateTime('now');
+        $startDate = $date->modify('first day of this Month')->format('Y-m-d');
+        $endDate = $date->modify('last day of this Month')->format('Y-m-d');
+
+        $bestSellers = DB::select("
+            SELECT
+                i.name as item_name,
+                i.item_code,
+                SUM(sd.qty) as sales_total,
+                FORMAT(SUM(sd.total), 2) as sales_value
+            FROM
+                sales_details sd
+            JOIN
+                sales s ON sd.sales_id = s.id
+            JOIN
+                items_details id ON sd.item_detail_id = id.id
+            JOIN 
+                items i ON id.item_code = i.item_code
+            WHERE
+                s.sales_date BETWEEN ? AND ?
+                AND s.status = 2 -- Only include approved sales
+            GROUP BY
+                id.id, i.name, i.item_code
+            ORDER BY
+                sales_total DESC
+            LIMIT 10
+        ", [$startDate, $endDate]);
+
+        return response()->json([
+            'status' => true,
+            'data' => $bestSellers
         ]);
     }
 }

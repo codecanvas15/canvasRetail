@@ -156,6 +156,7 @@ Route::group([
     // Route::get("dashboard/sumary", [DashboardController::class, "monthlySummary"]);
     // Route::get("dashboard/latest-transaction", [DashboardController::class, "getLatestTransaction"]);
     Route::get("dashboard", [DashboardController::class, "dashboard"]);
-
+    Route::get("transaction-sum", [DashboardController::class, "transactionSum"]);
+    Route::get("best-seller", [DashboardController::class, "getBestSeller"]);
 });
 

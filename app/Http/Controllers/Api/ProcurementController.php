@@ -97,7 +97,7 @@ class ProcurementController extends Controller
             DB::reconnect();
 
             $documentNumber = '';
-            $countDocNo = 0;
+            $countDocNo = 1;
 
             while ($countDocNo > 0)
             {
@@ -110,7 +110,7 @@ class ProcurementController extends Controller
                         DATE_FORMAT(created_at, '%d%m%Y') <= STR_TO_DATE(?, '%d%m%Y')
                         AND doc_number IS NOT NULL
                 ", [$date]);
-
+                
                 $documentNumber = 'PO-'.$date.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
 
                 $countDocNo = DB::select("
@@ -120,7 +120,7 @@ class ProcurementController extends Controller
                         procurements
                     WHERE
                         doc_number = ?
-                ", [$documentNumber]);
+                ", [$documentNumber])[0]->seq;
             }
             
             $taxes = explode(',', $request->tax_ids);

@@ -96,17 +96,33 @@ class SalesController extends Controller
             Config::set('database.connections.'. config('database.default') .'.strict', false);
             DB::reconnect();
 
-            $seq = DB::select("
-                SELECT
-                    count(doc_number) as seq
-                FROM
-                    sales
-                WHERE
-                    DATE_FORMAT(created_at, '%d%m%Y') <= STR_TO_DATE(?, '%d%m%Y')
-                    AND doc_number IS NOT NULL
-            ", [$date]);
+            
+            $documentNumber = "";
+            $countDocNo = 1;
 
-            $documentNumber = 'INV-'.$date.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
+            while ($countDocNo > 0)
+            {
+                $seq = DB::select("
+                    SELECT
+                        count(doc_number) as seq
+                    FROM
+                        sales
+                    WHERE
+                        DATE_FORMAT(created_at, '%d%m%Y') <= STR_TO_DATE(?, '%d%m%Y')
+                        AND doc_number IS NOT NULL
+                ", [$date]);
+
+                $documentNumber = 'INV-'.$date.'-'.str_pad(($seq[0]->seq+1), 4, '0', STR_PAD_LEFT);
+
+                $countDocNo = DB::select("
+                    SELECT
+                        count(doc_number) as seq
+                    FROM
+                        sales
+                    WHERE
+                        doc_number = ?
+                ", [$documentNumber])[0]->seq;
+            }
 
             $taxes = explode(',', $request->tax_ids);
 
