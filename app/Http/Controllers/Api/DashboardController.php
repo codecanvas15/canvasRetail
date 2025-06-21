@@ -143,50 +143,76 @@ class DashboardController extends Controller
 
     public function transactionSum()
     {
-        $date = new DateTime('now');
-        $endDate = $date->modify('last day of this Month')->format('Y-m-d');
-        $startDate = $date->modify('-6 months')->format('Y-m-d');
+        // Generate last 6 months (including current)
+        $months = [];
+        $date = new DateTime('first day of this month');
+        for ($i = 5; $i >= 0; $i--) {
+            $months[] = $date->modify("-$i month")->format('M-Y');
+            $date = new DateTime('first day of this month'); // reset for next iteration
+        }
 
-        $summary = DB::select("
+        $endDate = (new DateTime('last day of this month'))->format('Y-m-d');
+        $startDate = (new DateTime('first day of this month'))->modify('-5 months')->format('Y-m-d');
+
+        // Get sales data
+        $sales = DB::select("
             SELECT
-                sales.month,
-                IFNULL(sales.transaction_count, 0) as sales_total,
-                FORMAT(IFNULL(sales.total_amount, 0), 2) as sales_value,
-                IFNULL(procurement.transaction_count, 0) as procurement_total,
-                FORMAT(IFNULL(procurement.total_amount, 0), 2) as procurement_value
+                DATE_FORMAT(sales_date, '%b-%Y') as month,
+                COUNT(*) as transaction_count,
+                SUM(amount) as total_amount
             FROM
-                (
-                    SELECT
-                        DATE_FORMAT(sales_date, '%b-%Y') as month,
-                        COUNT(*) as transaction_count,
-                        SUM(amount) as total_amount
-                    FROM
-                        sales
-                    WHERE
-                        sales_date BETWEEN ? AND ?
-                    GROUP BY
-                        DATE_FORMAT(sales_date, '%b-%Y')
-                ) sales
-                LEFT JOIN
-                (
-                    SELECT
-                        DATE_FORMAT(procurement_date, '%b-%Y') as month,
-                        COUNT(*) as transaction_count,
-                        SUM(amount) as total_amount
-                    FROM
-                        procurements
-                    WHERE
-                        procurement_date BETWEEN ? AND ?
-                    GROUP BY
-                        DATE_FORMAT(procurement_date, '%b-%Y')
-                ) procurement ON sales.month = procurement.month
-            ORDER BY
-                sales.month ASC
-        ", [$startDate, $endDate, $startDate, $endDate]);
+                sales
+            WHERE
+                sales_date BETWEEN ? AND ?
+            GROUP BY
+                DATE_FORMAT(sales_date, '%b-%Y')
+        ", [$startDate, $endDate]);
+
+        // Get procurement data
+        $procurement = DB::select("
+            SELECT
+                DATE_FORMAT(procurement_date, '%b-%Y') as month,
+                COUNT(*) as transaction_count,
+                SUM(amount) as total_amount
+            FROM
+                procurements
+            WHERE
+                procurement_date BETWEEN ? AND ?
+            GROUP BY
+                DATE_FORMAT(procurement_date, '%b-%Y')
+        ", [$startDate, $endDate]);
+
+        // Map results for easy lookup
+        $salesMap = [];
+        foreach ($sales as $row) {
+            $salesMap[$row->month] = [
+                'transaction_count' => (int)$row->transaction_count,
+                'total_amount' => number_format($row->total_amount ?? 0, 2)
+            ];
+        }
+        $procurementMap = [];
+        foreach ($procurement as $row) {
+            $procurementMap[$row->month] = [
+                'transaction_count' => (int)$row->transaction_count,
+                'total_amount' => number_format($row->total_amount ?? 0, 2)
+            ];
+        }
+
+        // Build final array with 0 for missing months
+        $result = [];
+        foreach ($months as $month) {
+            $result[] = [
+                'month' => $month,
+                'sales_total' => $salesMap[$month]['transaction_count'] ?? 0,
+                'sales_value' => $salesMap[$month]['total_amount'] ?? "0.00",
+                'procurement_total' => $procurementMap[$month]['transaction_count'] ?? 0,
+                'procurement_value' => $procurementMap[$month]['total_amount'] ?? "0.00",
+            ];
+        }
 
         return response()->json([
             'status' => true,
-            'data' => $summary
+            'data' => $result
         ]);
     }
 
