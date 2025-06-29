@@ -376,8 +376,8 @@ class ReportController extends Controller
             ->join('items', 'items_details.item_code', '=', 'items.item_code')
             ->join('contacts', 'sales.contact_id', '=', 'contacts.id')
             ->join('locations', 'items_details.location_id', '=', 'locations.id')
-            ->select('contacts.name as customer', 'items.name as item_name', 'items.item_code', 'sales.sales_date', 'sales.doc_number', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'locations.name as location', 'sales_details.initial_price', 'sales.rounding');
-            // ->where('sales.status', 2);
+            ->select('contacts.name as customer', 'items.name as item_name', 'items.item_code', 'sales.sales_date', 'sales.doc_number', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'locations.name as location', 'sales_details.initial_price', 'sales.rounding')
+            ->where('sales.status', 2);
             
         if ($startSalesDate && $endSalesDate) 
         {
