@@ -1,78 +1,69 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Jobs;
 
 use App\Item;
 use App\Location;
 use App\ReportQueue;
 use App\Tax;
-use Illuminate\Console\Command;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-class GenerateReport extends Command
+class GenerateReport implements ShouldQueue
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'app:generate-report';
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $queueId;
 
     /**
-     * The console command description.
-     *
-     * @var string
+     * Create a new job instance.
      */
-    protected $description = 'Command description';
+    public function __construct($queueId)
+    {
+        $this->queueId = $queueId;
+    }
 
     /**
-     * Execute the console command.
+     * Execute the job.
      */
     public function handle()
     {
-        //
-        Log::channel('report')->info(' Scheduled task ran successfully');
-
-        $queue = ReportQueue::where('status',1)->get();
-        
-        try {
-            foreach($queue as $q)
-            {
-                if ($q->type == 'procurement')
-                {
-                    Log::channel('report')->info(' Generating Procurement Report');
-                    $this->procurementReport($q);
-                }
-                else if ($q->type == 'sales')
-                {
-                    Log::channel('report')->info(' Generating Sales Report');
-                    $this->salesReport($q);
-                }
-                else if ($q->type == 'stockcard')
-                {
-                    Log::channel('report')->info(' Generating Stockcard Report');
-                    $this->stockCardReport($q);
-                }
-                else if ($q->type == 'stockvalue')
-                {
-                    Log::channel('report')->info(' Generating Stockvalue Report');
-                    $this->stockValueReport($q);
-                }
-            }
+        $queue = ReportQueue::find($this->queueId);
+        if (!$queue || $queue->status != 1) {
+            return;
         }
-        catch (\Throwable $e)
-        {
+
+        try {
+            if ($queue->type == 'procurement') {
+                Log::channel('report')->info('Generating Procurement Report');
+                $this->procurementReport($queue);
+            } else if ($queue->type == 'sales') {
+                Log::channel('report')->info('Generating Sales Report');
+                $this->salesReport($queue);
+            } else if ($queue->type == 'stockcard') {
+                Log::channel('report')->info('Generating Stockcard Report');
+                $this->stockCardReport($queue);
+            } else if ($queue->type == 'stockvalue') {
+                Log::channel('report')->info('Generating Stockvalue Report');
+                $this->stockValueReport($queue);
+            }
+        } catch (\Throwable $e) {
             $errorMessage = now() . ' ' . $e->getMessage();
             Log::channel('report')->error($errorMessage);
             Log::channel('report')->error($e->getTraceAsString());
-            return $errorMessage;
-        }
+            // $queue->update(['status' => 3, 'file' => null]);
 
-        Log::channel('report')->info(' DONE');
+            Log::error('Job failed: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+        }
     }
 
     public function procurementReport($queue)

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Item;
+use App\Jobs\GenerateReport;
 use App\Location;
 use App\ReportQueue;
 use App\Tax;
@@ -49,6 +50,8 @@ class ReportController extends Controller
             'location_id' => $request->location_id,
             'status' => 1,
         ]);
+
+        GenerateReport::dispatch($queue->id);
 
         return response()->json([
             'status' => true,
