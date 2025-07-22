@@ -111,7 +111,14 @@ class StockCardController extends Controller
             ORDER BY a.item_code, a.created_at
         ", array_merge([$filterStartDate], $locationParams));
 
-        $items = Item::where('status', 1)->where('name', $request->search)->orwhere('item_code', $request->search)->paginate(10); // Add pagination here
+        if ($request->search) 
+        {
+            $items = Item::where('status', 1)->where('name', $request->search)->orwhere('item_code', $request->search)->paginate(10); // Add pagination here
+        } 
+        else 
+        {
+            $items = Item::where('status', 1)->paginate(10);
+        }
 
         $stockList = [];
 
