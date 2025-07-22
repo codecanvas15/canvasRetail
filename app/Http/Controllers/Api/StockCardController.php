@@ -113,7 +113,11 @@ class StockCardController extends Controller
 
         if ($request->search) 
         {
-            $items = Item::where('status', 1)->where('name', $request->search)->orwhere('item_code', $request->search)->paginate(10); // Add pagination here
+            $items = Item::where('status', 1)->where(function($query) use ($request) 
+            {
+                $query->where('name', 'like', '%' . $request->search . '%')
+                ->orWhere('item_code', 'like', '%' . $request->search . '%');
+            })->paginate(10); // Add pagination here
         } 
         else 
         {
