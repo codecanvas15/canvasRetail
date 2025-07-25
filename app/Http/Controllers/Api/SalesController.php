@@ -169,6 +169,19 @@ class SalesController extends Controller
             {
                 $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
 
+                if ($itemDet == null)
+                {
+                    $itemDet = ItemDetail::create([
+                        'item_code'     => $item['item_code'],
+                        'location_id'   => $request->location_id,
+                        'qty'           => 0,
+                        'price'         => 0,
+                        'created_by'    => auth()->user()->id,
+                        'updated_by'    => auth()->user()->id,
+                        'status'        => 1
+                    ]);
+                }
+
                 if ($request->include_tax)
                 {
                     $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
