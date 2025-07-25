@@ -76,7 +76,7 @@
             </tr>
         </table>
         
-        <table class="data-table" style="width: 100%; min-height: 270px;">
+        <table class="data-table" style="width: 100%; min-height: 255px;">
             <thead>
                 <tr>
                     <th>No.</th>
