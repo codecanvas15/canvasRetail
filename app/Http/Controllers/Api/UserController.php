@@ -104,6 +104,14 @@ class UserController extends Controller
 
     public function deleteUser(Request $request, $id)
     {
+        if ($id == auth()->user()->id)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "You cannot delete your own account"
+            ], 400);
+        }
+        
         $user = User::where('id', $id)->where('status', 1)->first();
 
         if (!$user) 

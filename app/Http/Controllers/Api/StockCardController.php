@@ -191,51 +191,6 @@ class StockCardController extends Controller
                         $value = ($saldoNominal == null ? $itemStock[$j]->procurement_total : $saldoNominal) / $procurement_qty;
                     }
                 }
-
-                // if ($itemStock[$j]->sales_total != null)
-                // {
-                //     $itemStock[$j]->sales_total = $value;
-                // }
-
-                // if($itemStock[$j]->procurement_date != null)
-                // {
-                //     $saldoMasuk = $itemStock[$j]->procurement_qty;
-                // }
-                // else if ($itemStock[$j]->adjustment_date != null && $itemStock[$j]->adjustment_qty > 0)
-                // {
-                //     $saldoMasuk = $itemStock[$j]->adjustment_qty;
-                // }
-                // else
-                // {
-                //     $saldoMasuk = null;
-                // }
-
-                // if ($saldoMasuk > 0 && $saldoQty != 0)
-                // {
-                //     $saldoNominal += $value * $saldoMasuk;
-                // }
-
-                // if($itemStock[$j]->sales_qty != null)
-                // {
-                //     $saldoKeluar = $itemStock[$j]->sales_qty;
-                // }
-                // else if ($itemStock[$j]->adjustment_date != null && $itemStock[$j]->adjustment_qty < 0)
-                // {
-                //     $saldoKeluar = $itemStock[$j]->adjustment_qty;
-                // }
-                // else if ($itemStock[$j]->usage_date != null)
-                // {
-                //     $saldoKeluar = $itemStock[$j]->usage_qty;
-                // }
-                // else
-                // {
-                //     $saldoKeluar = null;
-                // }
-                
-                // if ($saldoKeluar > 0 && $saldoQty != 0)
-                // {
-                //     $saldoNominal -= $value * $saldoKeluar;
-                // }
             }
 
             $saldoNominal = $value * $saldoQty;
