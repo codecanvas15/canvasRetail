@@ -457,11 +457,20 @@ class ProcurementController extends Controller
 
             $procurementDate = date('Y-m-d H:i:s',$date);
 
-            $taxes = explode(',', $request->tax_ids);
+            if($request->tax_ids == null && $procurement->tax != null)
+            {
+                $taxesVal = explode('|', $procurement->tax);
+
+                $taxes = Tax::whereIn('value', $taxesVal)->pluck('id')->toArray();
+            }
+            else
+            {
+                $taxes = explode(',', $request->tax_ids);
+            }
 
             $tax = Tax::whereIn('id', $taxes)->sum('value');
             $taxes = Tax::whereIn('id', $taxes)->get();
-
+            
             $totalTax = [];
             foreach ($taxes as $key)
             {
