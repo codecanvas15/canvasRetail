@@ -482,11 +482,16 @@ class ProcurementController extends Controller
             DB::beginTransaction();
             try
             {
+                if (!$request->include_tax)
+                {
+                    $request->include_tax = $procurement->include_tax;
+                }
+
                 $procurement->update([
                     'contact_id'            => $request->contact_id ?? $procurement->contact_id,
                     'procurement_date'      => $procurementDate,
                     'status'                => 1,
-                    'include_tax'           => $request->include_tax == 1 ? true : false,
+                    'include_tax'           => $request->include_tax,
                     'external_doc_no'       => $request->external_doc_no ?? $procurement->external_doc_no,
                     'delivery_status'       => $request->delivery_status ?? $procurement->delivery_status,
                     'updated_by'            => auth()->user()->id,
