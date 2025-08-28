@@ -487,7 +487,6 @@ class ProcurementController extends Controller
                     'procurement_date'      => $procurementDate,
                     'status'                => 1,
                     'include_tax'           => $request->include_tax == 1 ? true : false,
-                    'rounding'              => (float)($request->round ?? $procurement->rounding),
                     'external_doc_no'       => $request->external_doc_no ?? $procurement->external_doc_no,
                     'delivery_status'       => $request->delivery_status ?? $procurement->delivery_status,
                     'updated_by'            => auth()->user()->id,
@@ -652,6 +651,7 @@ class ProcurementController extends Controller
                 $paymentStatus = 'Unpaid';
                 
                 $procurement->update([
+                    'rounding'      => (float)($request->round ?? $procurement->rounding),
                     'amount'        => $roundedAmount,
                     'pay_status'    => $paymentStatus,
                     'updated_by'    => auth()->user()->id,
