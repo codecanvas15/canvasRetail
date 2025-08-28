@@ -572,6 +572,11 @@ class ProcurementController extends Controller
                         
                         $totalAmount += ($total + $total * ($tax/100));
                     }
+
+                    if ($request->round != null)
+                    {
+                        $totalAmount += $procurement->rounding;
+                    }
                 }
                 else
                 {
@@ -622,9 +627,14 @@ class ProcurementController extends Controller
                     }
 
                     $totalAmount = $procurement->amount; 
+
+                    if ($request->round != null)
+                    {
+                        $totalAmount -= $procurement->rounding;
+                        $totalAmount += $request->round;
+                    }
                 }
 
-                $totalAmount += $request->round ?? $procurement->rounding;
     
                 if ($request->rounding === 'down') 
                 {
@@ -638,31 +648,8 @@ class ProcurementController extends Controller
                 {
                     $roundedAmount = round($totalAmount,2);
                 }
-    
-                // $payment = Payment::where('procurement_id', $procurement->id)->where('status', 1)->where('pay_desc', 'Initial Payment')->where('type', 'OUT')->first();
-    
-                // $payment->update([
-                //     'amount'        => $request->pay_amount ?? $payment->amount,
-                //     'updated_by'    => auth()->user()->id,
-                //     'updated_at'    => date("Y-m-d H:i:s")
-                // ]);
-    
-                // $outstanding = $roundedAmount - $payment->amount;
-    
-                // $paymentStatus = '';
-                // if ($outstanding > 0)
-                // {
-                //     $paymentStatus = 'Partially Paid';
-                // }
-                // else if ($outstanding <= 0)
-                // {
-                //     $paymentStatus = 'Paid';
-                // }
-    
-                // if ($request->pay_amount == 0 && $outstanding == $roundedAmount)
-                // {
-                    $paymentStatus = 'Unpaid';
-                // }
+
+                $paymentStatus = 'Unpaid';
                 
                 $procurement->update([
                     'amount'        => $roundedAmount,
