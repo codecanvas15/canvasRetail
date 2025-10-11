@@ -88,6 +88,11 @@ class StockCardController extends Controller
             array_push($paramsStockAwal, $request->location_id);
         }
 
+        if ($where != '') {
+            $where = 'WHERE ' . $where;
+            $whereTxDate = 'WHERE ' . $whereTxDate;
+        }
+
         Config::set('database.connections.'. config('database.default') .'.strict', false);
         DB::reconnect();
 
@@ -110,7 +115,6 @@ class StockCardController extends Controller
                 a.location_id
             FROM 
                 stock_value a
-            WHERE
                 $where
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
         ", $params);
@@ -124,7 +128,6 @@ class StockCardController extends Controller
                 a.tx_date
             FROM 
                 stock_value_sum a
-            WHERE
                 $whereTxDate
             ORDER BY a.item_code, a.created_at
         ", $paramsStockAwal);
