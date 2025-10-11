@@ -1,6 +1,7 @@
 CREATE OR REPLACE VIEW stock_value AS
 SELECT
     i.item_code,
+    i.unit as item_unit,
     i.name as item_name,
     l.name as location_name,
     p.procurement_date,
@@ -29,6 +30,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     i.name as item_name,
     l.name as location_name,
     null procurement_date,
@@ -57,6 +59,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     i.name as item_name,
     l.name as location_name,
     null as procurement_date,
@@ -85,6 +88,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     i.name as item_name,
     l.name as location_name,
     null as procurement_date,
@@ -113,6 +117,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     i.name as item_name,
     l.name as location_name,
     (

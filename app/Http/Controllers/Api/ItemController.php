@@ -71,7 +71,8 @@ class ItemController extends Controller
             'category'   => $request->category ? $request->category : '',
             'created_by' => auth()->user()->id,
             'updated_by' => auth()->user()->id,
-            'status'     => 1
+            'status'     => 1,
+            'unit'       => $request->unit ? $request->unit : ''
         ]);
 
         return response()->json([
@@ -152,7 +153,8 @@ class ItemController extends Controller
                 'image'      => $imagePath == '' ? $item->image : $imagePath,
                 'category'   => $request->category ? $request->category : $item->category,
                 'updated_at' => date("Y-m-d H:i:s"),
-                'updated_by' => auth()->user()->id
+                'updated_by' => auth()->user()->id,
+                'unit'       => $request->unit ? $request->unit : $item->unit
             ]);            
 
             return response()->json([

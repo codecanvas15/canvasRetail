@@ -847,7 +847,7 @@ class SalesController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('sales_details.sales_id', $id)
-                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->select('items.item_code', 'items.unit', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 
             $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();
@@ -908,8 +908,9 @@ class SalesController extends Controller
         $query->join('contacts', 'sales.contact_id', '=', 'contacts.id')
                 ->join('sales_details', 'sales.id', '=', 'sales_details.sales_id')
                 ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
+                ->join('items', 'items_details.item_code', '=', 'items.item_code')
                 ->join('locations', 'items_details.location_id', '=', 'locations.id')
-                ->select('sales.sales_date', 'contacts.name as contact_name', 'items_details.item_code', 'locations.name as location_name', 'sales.doc_number', 'sales_details.qty as sales_qty', 'sales_details.price', 'sales_details.total', 'sales.status');
+                ->select('sales.sales_date', 'contacts.name as contact_name', 'items_details.item_code', 'items.unit', 'locations.name as location_name', 'sales.doc_number', 'sales_details.qty as sales_qty', 'sales_details.price', 'sales_details.total', 'sales.status');
 
         if ($search != null)
         {
@@ -1056,7 +1057,7 @@ class SalesController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('sales_details.sales_id', $id)
-                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.item_code as item_code', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->select('items.item_code', 'items.unit', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.item_code as item_code', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 
             $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();
@@ -1118,7 +1119,7 @@ class SalesController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('sales_details.sales_id', $id)
-                            ->select('items.item_code', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.item_code as item_code', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->select('items.item_code', 'items.unit', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.item_code as item_code', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 
             $paymentDet = Payment::where('sales_id', $id)->where('status', 1)->get();

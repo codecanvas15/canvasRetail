@@ -39,8 +39,8 @@ class StockCardController extends Controller
         }
 
         $date = new DateTime('now');
-        $filterStartDate = $date->modify('first day of this Month')->format('Y-m-d');
-        $filterEndDate = $date->modify('last day of this Month')->format('Y-m-d');
+        // $filterStartDate = $date->modify('first day of this Month')->format('Y-m-d');
+        // $filterEndDate = $date->modify('last day of this Month')->format('Y-m-d');
 
         if ($request->start_date)
         {
@@ -52,11 +52,40 @@ class StockCardController extends Controller
             $filterEndDate = $endDate->format('Y-m-d');
         }
 
-        $locationCondition = '';
-        $locationParams = [];
+        $where = '';
+        $whereTxDate = '';
+        $params = [];
+        $paramsStockAwal = [];
+        if ($request->start_date && $request->end_date)
+        {
+            $where = '(
+                    a.procurement_date >= ?
+                    or a.sales_date >= ?
+                    or a.adjustment_date >= ?
+                    or a.usage_date >= ?
+                ) 
+                AND (
+                    a.procurement_date <= ?
+                    or a.sales_date <= ?
+                    or a.adjustment_date <= ?
+                    or a.usage_date <= ?
+                )';
+
+            $params = [$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate];
+
+            $whereTxDate = 'a.tx_date < ?';
+            $paramsStockAwal = [$filterStartDate];
+        }
+
         if ($request->location_id) {
-            $locationCondition = 'AND a.location_id = ?';
-            $locationParams[] = $request->location_id;
+            if ($where != '') {
+                $where .= ' AND ';
+                $whereTxDate .= ' AND ';
+            }
+            $where .= 'a.location_id = ?';
+            $whereTxDate .= 'a.location_id = ?';
+            array_push($params, $request->location_id);
+            array_push($paramsStockAwal, $request->location_id);
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -65,6 +94,7 @@ class StockCardController extends Controller
         $stock = DB::select("
             SELECT
                 a.item_code,
+                a.item_unit,
                 a.item_name,
                 a.location_name,
                 a.procurement_date,
@@ -81,35 +111,23 @@ class StockCardController extends Controller
             FROM 
                 stock_value a
             WHERE
-                (
-                    a.procurement_date >= ?
-                    or a.sales_date >= ?
-                    or a.adjustment_date >= ?
-                    or a.usage_date >= ?
-                ) 
-                AND (
-                    a.procurement_date <= ?
-                    or a.sales_date <= ?
-                    or a.adjustment_date <= ?
-                    or a.usage_date <= ?
-                )
-                $locationCondition
+                $where
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
-        ", array_merge([$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate], $locationParams));
+        ", $params);
 
         $stockAwal = DB::select("
             SELECT
                 a.item_code,
+                a.item_unit,
                 COALESCE(a.procurement_qty, a.sales_qty * -1, a.adjustment_qty, a.usage_qty * -1) as saldo_qty,
                 IFNULL(a.procurement_total, 0) as saldo_nominal,
                 a.tx_date
             FROM 
                 stock_value_sum a
             WHERE
-                a.tx_date < ?
-                $locationCondition
+                $whereTxDate
             ORDER BY a.item_code, a.created_at
-        ", array_merge([$filterStartDate], $locationParams));
+        ", $paramsStockAwal);
 
         if ($request->search) 
         {
@@ -197,6 +215,7 @@ class StockCardController extends Controller
             
             $stockList[] = [
                 'item_code' => $item_code,
+                'item_unit' => $item->unit,
                 'item_name' => $item->name,
                 'item_image' => $item->image,
                 'saldo_qty' => $saldoQty,
@@ -259,12 +278,36 @@ class StockCardController extends Controller
             $filterEndDate = $endDate->format('Y-m-d');
         }
 
-        $locationCondition = '';
-        $locationParams = [];
-        if ($request->location_id) 
+        $where = 'AND ';
+        $whereTxDate = 'AND ';
+        $params = [];
+        $paramsStockAwal = [];
+        if ($request->start_date && $request->end_date)
         {
-            $locationCondition = 'AND a.location_id = ?';
-            $locationParams[] = $request->location_id;
+            $where .= '(
+                    a.procurement_date >= ?
+                    or a.sales_date >= ?
+                    or a.adjustment_date >= ?
+                    or a.usage_date >= ?
+                ) 
+                AND (
+                    a.procurement_date <= ?
+                    or a.sales_date <= ?
+                    or a.adjustment_date <= ?
+                    or a.usage_date <= ?
+                )';
+
+            $params = [$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate];
+
+            $whereTxDate .= 'a.tx_date < ?';
+            $paramsStockAwal = [$filterStartDate];
+        }
+
+        if ($request->location_id) {
+            $where .= 'a.location_id = ?';
+            $whereTxDate .= 'a.location_id = ?';
+            array_push($params, $request->location_id);
+            array_push($paramsStockAwal, $request->location_id);
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
@@ -273,6 +316,7 @@ class StockCardController extends Controller
         $stock = DB::select("
             SELECT
                 a.item_code,
+                a.item_unit,
                 a.item_name,
                 a.location_name,
                 COALESCE(a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date) as tx_date,
@@ -291,35 +335,23 @@ class StockCardController extends Controller
                 stock_value a
             WHERE
                 a.item_code = ?
-                AND (
-                    a.procurement_date >= ?
-                    or a.sales_date >= ?
-                    or a.adjustment_date >= ?
-                    or a.usage_date >= ?
-                )
-                AND (
-                    a.procurement_date <= ?
-                    or a.sales_date <= ?
-                    or a.adjustment_date <= ?
-                    or a.usage_date <= ?
-                )
-                $locationCondition
+                $where
             ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
-        ", array_merge([$request->item_code,$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate], $locationParams));
+        ", array_merge([$request->item_code], $params));
 
         $stockAwal = DB::select("
             SELECT
                 a.item_code,
+                a.item_unit,
                 COALESCE(a.procurement_qty, a.sales_qty * -1, a.adjustment_qty, a.usage_qty * -1) as saldo_qty,
                 IFNULL(a.procurement_total, 0) as saldo_nominal
             FROM 
                 stock_value_sum a
             WHERE
-                a.tx_date < ?
-                AND a.item_code = ?
-                $locationCondition
+                a.item_code = ?
+                $whereTxDate
             ORDER BY a.item_code, a.created_at
-        ", array_merge([$filterStartDate, $request->item_code], $locationParams));
+        ", array_merge([$request->item_code], $paramsStockAwal));
 
         $result = [];
 
@@ -334,6 +366,7 @@ class StockCardController extends Controller
             }));
 
             $result[$i]['item_code'] = $item_code;
+            $result[$i]['item_unit'] = $items[$i]->unit;
             $result[$i]['item_name'] = $items[$i]->name;
             $result[$i]['item_image'] = $items[$i]->image;
 

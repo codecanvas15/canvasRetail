@@ -382,7 +382,7 @@ class StockAdjustmentController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('stock_adjustment.stock_adjustment_id', $id)
-                            ->select('items.item_code', 'stock_adjustment.qty', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->select('items.item_code', 'items.unit', 'stock_adjustment.qty', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 
             $data = $adj;

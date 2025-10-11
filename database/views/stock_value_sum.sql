@@ -1,6 +1,7 @@
 CREATE VIEW stock_value_sum AS 
 SELECT
     i.item_code,
+    i.unit as item_unit,
     pd.qty as procurement_qty,
     pd.total as procurement_total,
     null as sales_qty,
@@ -21,6 +22,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     null as procurement_qty,
     null as procurement_total,
     sd.qty as sales_qty,
@@ -41,6 +43,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     null as procurement_qty,
     null as procurement_total,
     null as sales_qty,
@@ -61,6 +64,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     null as procurement_qty,
     null as procurement_total,
     null as sales_qty,
@@ -81,6 +85,7 @@ WHERE
 UNION ALL
 SELECT
     i.item_code,
+    i.unit as item_unit,
     CASE 
         WHEN vt.sales_id is not null THEN vd.qty
         ELSE null

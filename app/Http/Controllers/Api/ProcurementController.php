@@ -935,8 +935,9 @@ class ProcurementController extends Controller
         $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
                 ->join('procurement_details', 'procurements.id', '=', 'procurement_details.procurement_id')
                 ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
+                ->join('items', 'items_details.item_code', '=', 'items.item_code')
                 ->join('locations', 'items_details.location_id', '=', 'locations.id')
-                ->select('procurements.procurement_date', 'contacts.name as contact_name', 'items_details.item_code', 'locations.name as location_name', 'procurements.doc_number', 'procurement_details.qty as procurement_qty', 'procurement_details.price', 'procurement_details.total', 'procurements.status');
+                ->select('procurements.procurement_date', 'contacts.name as contact_name', 'items_details.item_code', 'items.unit', 'locations.name as location_name', 'procurements.doc_number', 'procurement_details.qty as procurement_qty', 'procurement_details.price', 'procurement_details.total', 'procurements.status');
 
         if ($search != null)
         {
@@ -1000,7 +1001,7 @@ class ProcurementController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('procurement_details.procurement_id', $id)
-                            ->select('items.item_code', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.initial_price', 'procurement_details.total', 'procurement_details.tax_ids', 'procurement_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
+                            ->select('items.item_code', 'items.unit', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.initial_price', 'procurement_details.total', 'procurement_details.tax_ids', 'procurement_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 
             $paymentDet = Payment::where('procurement_id', $id)->where('status', 1)->get();
