@@ -277,4 +277,14 @@ class ItemController extends Controller
             "data"  => $categories
         ]);
     }
+
+    public function getUniqueUnits()
+    {
+        $units = Item::where('status', 1)->distinct()->pluck('unit');
+
+        return response()->json([
+            "status" => true,
+            "data"  => $units
+        ]);
+    }
 }

@@ -61,6 +61,9 @@ Route::group([
     // get categories
     Route::get("categories",[ItemController::class, "getUniqueCategories"])->middleware('role:owner,admin');
 
+    // get units
+    Route::get("units",[ItemController::class, "getUniqueUnits"])->middleware('role:owner,admin');
+
     // location
     Route::post("location",[LocationController::class, "addLocation"])->middleware('role:owner,admin');
     Route::get("location",[LocationController::class, "getLocation"])->middleware('role:owner,admin');
