@@ -180,7 +180,6 @@ class StockCardController extends Controller
             }
 
             $saldoNominal = ($value < 0 ? $value * -1 : $value) * $saldoQty;
-            
 
             if(sizeof($itemStockAwal) > 0)
             {
@@ -188,31 +187,31 @@ class StockCardController extends Controller
                 $saldoNominal    = $saldoNominal;
             }
 
-            $itemStock = array_values(array_filter($stock, function($k) use ($item_code) {
-                return $k->item_code == $item_code;
-            }));
+            // $itemStock = array_values(array_filter($stock, function($k) use ($item_code) {
+            //     return $k->item_code == $item_code;
+            // }));
             
-            for($j = 0; $j < sizeof($itemStock); $j++)
-            {
-                if ($itemStock[$j]->location_id == $request->location_id || $request->location_id == null)
-                {
-                    $saldoQty = $saldoQty + ($itemStock[$j]->procurement_qty == null ? 0 : $itemStock[$j]->procurement_qty) - ($itemStock[$j]->sales_qty == null ? 0 : $itemStock[$j]->sales_qty) + ($itemStock[$j]->adjustment_qty == null ? 0 : $itemStock[$j]->adjustment_qty) - ($itemStock[$j]->usage_qty == null ? 0 : $itemStock[$j]->usage_qty);
-                }
+            // for($j = 0; $j < sizeof($itemStock); $j++)
+            // {
+            //     if ($itemStock[$j]->location_id == $request->location_id || $request->location_id == null)
+            //     {
+            //         $saldoQty = $saldoQty + ($itemStock[$j]->procurement_qty == null ? 0 : $itemStock[$j]->procurement_qty) - ($itemStock[$j]->sales_qty == null ? 0 : $itemStock[$j]->sales_qty) + ($itemStock[$j]->adjustment_qty == null ? 0 : $itemStock[$j]->adjustment_qty) - ($itemStock[$j]->usage_qty == null ? 0 : $itemStock[$j]->usage_qty);
+            //     }
                 
-                if ($itemStock[$j]->procurement_total != null)
-                {
-                    $procurement_qty += $itemStock[$j]->procurement_qty;
+            //     if ($itemStock[$j]->procurement_total != null)
+            //     {
+            //         $procurement_qty += $itemStock[$j]->procurement_qty;
                     
-                    if ($procurement_qty == 0)
-                    {
-                        $value = 0;
-                    }
-                    else
-                    {
-                        $value = ($saldoNominal == null ? $itemStock[$j]->procurement_total : $saldoNominal) / $procurement_qty;
-                    }
-                }
-            }
+            //         if ($procurement_qty == 0)
+            //         {
+            //             $value = 0;
+            //         }
+            //         else
+            //         {
+            //             $value = ($saldoNominal == null ? $itemStock[$j]->procurement_total : $saldoNominal) / $procurement_qty;
+            //         }
+            //     }
+            // }
 
             $saldoNominal = $value * $saldoQty;
             
