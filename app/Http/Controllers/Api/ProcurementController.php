@@ -450,7 +450,7 @@ class ProcurementController extends Controller
             ], 400);
         }
         
-        if(Procurement::where('id', $id)->whereIn('status', [1,3])->exists())
+        if(Procurement::where('id', $id)->whereIn('status', [1])->exists())
         {
             $procurement = Procurement::where('id', $id)->whereIn('status', [1,3])->first();
             $date = strtotime($request->procurement_date ?? $procurement->procurement_date);
@@ -482,16 +482,11 @@ class ProcurementController extends Controller
             DB::beginTransaction();
             try
             {
-                if (!$request->include_tax)
-                {
-                    $request->include_tax = $procurement->include_tax;
-                }
-
                 $procurement->update([
                     'contact_id'            => $request->contact_id ?? $procurement->contact_id,
                     'procurement_date'      => $procurementDate,
                     'status'                => 1,
-                    'include_tax'           => $request->include_tax,
+                    'include_tax'           => $request->include_tax ?? $procurement->include_tax,
                     'external_doc_no'       => $request->external_doc_no ?? $procurement->external_doc_no,
                     'delivery_status'       => $request->delivery_status ?? $procurement->delivery_status,
                     'updated_by'            => auth()->user()->id,
@@ -563,15 +558,23 @@ class ProcurementController extends Controller
                         }
         
                         $procurementDet->update([
+                            'status'        => 0,  
+                            'updated_by'    => auth()->user()->id,
+                            'updated_at'    => date("Y-m-d H:i:s")
+                        ]);
+
+                        ProcurementDetail::create([
+                            'procurement_id'    => $procurement->id,
                             'item_detail_id'    => $itemDet['id'],
-                            'qty'               => $item['qty'] ?? $procurementDet->qty,
-                            'price'             => $itemPrice ?? $procurementDet->price,
-                            'total'             => round($total, 2) ?? $procurementDet->total,
-                            'tax_ids'           => $request->tax_ids ?? $procurementDet->tax_ids,
+                            'qty'               => $item['qty'],
+                            'price'             => $itemPrice,
+                            'total'             => round($total, 2),
+                            'tax_ids'           => $request->tax_ids,
+                            'created_by'        => auth()->user()->id,
                             'updated_by'        => auth()->user()->id,
-                            'updated_at'        => date("Y-m-d H:i:s"),
-                            'discount'          => implode('|', $discounts) ?? $procurementDet->discount,
-                            'initial_price'     => $item['price'] ?? $procurementDet->initial_price
+                            'status'            => 1,
+                            'discount'          => implode('|', $discounts),
+                            'initial_price'     => $item['price']
                         ]);
                         
                         $totalAmount += ($total + $total * ($tax/100));
@@ -693,7 +696,7 @@ class ProcurementController extends Controller
         {
             return response()->json([
                 "status" => false,
-                "message" => "Procurement not found or not approved yet"
+                "message" => "Procurement not found"
             ], 404);
         }
     }
@@ -1001,6 +1004,7 @@ class ProcurementController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('procurement_details.procurement_id', $id)
+                            ->where('procurement_details.status', 1)
                             ->select('items.item_code', 'items.unit', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.initial_price', 'procurement_details.total', 'procurement_details.tax_ids', 'procurement_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 

@@ -1,4 +1,4 @@
-CREATE VIEW stock_value_sum AS 
+CREATE VIEW stock_value_sum AS
 SELECT
     i.item_code,
     i.unit as item_unit,
@@ -30,7 +30,7 @@ SELECT
     null as adjustment_qty,
     null as usage_qty,
     s.sales_date as tx_date,
-    s.created_at created_at,
+    s.created_at as created_at,
     l.id as location_id
 FROM
     items i

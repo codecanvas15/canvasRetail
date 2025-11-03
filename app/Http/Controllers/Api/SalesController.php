@@ -473,19 +473,28 @@ class SalesController extends Controller
                     }
     
                     $salesDet = SalesDetail::where('id', $salesDet->id)->where('status', 1)->first();
-    
+                    
                     $salesDet->update([
+                        'status'            => 0,
+                        'updated_by'        => auth()->user()->id,
+                        'updated_at'        => date("Y-m-d H:i:s")
+                    ]);
+    
+                    // insert sales detail
+                    SalesDetail::create([
+                        'sales_id'          => $sales->id,
                         'item_detail_id'    => $itemDet['id'],
                         'qty'               => $item['qty'],
                         'price'             => $itemPrice,
                         'total'             => $total,
-                        'tax_ids'           => $request->tax_ids ?? $salesDet->tax_ids,
+                        'tax_ids'           => $request->tax_ids,
+                        'created_by'        => auth()->user()->id,
                         'updated_by'        => auth()->user()->id,
                         'status'            => 1,
                         'discount'          => $discount,
                         'initial_price'     => $item['price']
                     ]);
-    
+
                     $totalAmount += ($total + $total * ($tax/100));
                 }
             }
@@ -555,30 +564,7 @@ class SalesController extends Controller
                 $roundedAmount = round($totalAmount);
             }
 
-            // $payment = Payment::where('sales_id', $sales->id)->where('status', 1)->where('pay_desc', 'Initial Payment')->where('type', 'IN')->first();
-        
-            // $payment->update([
-            //     'amount'        => $request->pay_amount ?? $payment->amount,
-            //     'updated_by'    => auth()->user()->id,
-            //     'updated_at'    => date("Y-m-d H:i:s")
-            // ]);
-
-            // $outstanding = $roundedAmount - $payment->amount;
-
-            // $paymentStatus = '';
-            // if ($outstanding > 0)
-            // {
-            //     $paymentStatus = 'Partially Paid';
-            // }
-            // else if ($outstanding <= 0)
-            // {
-            //     $paymentStatus = 'Paid';
-            // }
-
-            // if ($request->pay_amount == 0 && $outstanding == $roundedAmount)
-            // {
-                $paymentStatus = 'Unpaid';
-            // }
+            $paymentStatus = 'Unpaid';
 
             $sales->update([
                 'amount'        => $roundedAmount,

@@ -17,7 +17,8 @@ class RotateLogs extends Command
         // $maxSize = 1;
         $maxSize = 10 * 1024 * 1024;
 
-        if (File::exists($logPath) && File::size($logPath) > $maxSize) {
+        if (File::exists($logPath) && File::size($logPath) > $maxSize) 
+        {
             $archivePath = storage_path('logs/generateReport-' . Carbon::now()->format('Y-m-d_H-i-s') . '.log');
 
             // Move the log file to an archive file
@@ -27,16 +28,20 @@ class RotateLogs extends Command
             File::put($logPath, '');
 
             $this->info('Log rotated: ' . $archivePath);
-        } else {
+        } 
+        else 
+        {
             $this->info('Log size is under 10MB. No rotation needed.');
         }
 
         $files = File::files(storage_path('logs'));
 
-        foreach ($files as $file) {
+        foreach ($files as $file) 
+        {
             $lastModified = Carbon::createFromTimestamp(File::lastModified($file));
 
-            if (Carbon::now()->diffInDays($lastModified) > 7) {
+            if (Carbon::now()->diffInDays($lastModified) > 7) 
+            {
                 File::delete($file);
             }
         }

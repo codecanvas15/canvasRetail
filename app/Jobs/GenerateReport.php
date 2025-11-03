@@ -37,7 +37,10 @@ class GenerateReport implements ShouldQueue
     public function handle()
     {
         $queue = ReportQueue::find($this->queueId);
-        if (!$queue || $queue->status != 1) {
+        if (!$queue || $queue->status != 1) 
+        {
+            Log::channel('report')->error('Report queue not found or not in processing status');
+            Log::error('Report queue not found or not in processing status');
             return;
         }
 
