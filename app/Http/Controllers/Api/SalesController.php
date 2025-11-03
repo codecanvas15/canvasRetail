@@ -833,6 +833,7 @@ class SalesController extends Controller
                             ->join('items', 'items_details.item_code', '=', 'items.item_code')
                             ->join('locations', 'items_details.location_id', '=', 'locations.id')
                             ->where('sales_details.sales_id', $id)
+                            ->where('sales_details.status', 1)
                             ->select('items.item_code', 'items.unit', 'sales_details.qty', 'sales_details.price', 'sales_details.initial_price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'items.name as item_name', 'items.image as item_image', 'items.category', 'locations.name as location_name', 'locations.id as location_id')
                             ->get();
 
