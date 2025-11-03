@@ -941,7 +941,8 @@ class ProcurementController extends Controller
                 ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
                 ->join('items', 'items_details.item_code', '=', 'items.item_code')
                 ->join('locations', 'items_details.location_id', '=', 'locations.id')
-                ->select('procurements.procurement_date', 'contacts.name as contact_name', 'items_details.item_code', 'items.unit', 'locations.name as location_name', 'procurements.doc_number', 'procurement_details.qty as procurement_qty', 'procurement_details.price', 'procurement_details.total', 'procurements.status');
+                ->select('procurements.procurement_date', 'contacts.name as contact_name', 'items_details.item_code', 'items.unit', 'locations.name as location_name', 'procurements.doc_number', 'procurement_details.qty as procurement_qty', 'procurement_details.price', 'procurement_details.total', 'procurements.status')
+                ->where('procurement_details.status', 1);
 
         if ($search != null)
         {

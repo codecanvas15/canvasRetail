@@ -898,7 +898,8 @@ class SalesController extends Controller
                 ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
                 ->join('items', 'items_details.item_code', '=', 'items.item_code')
                 ->join('locations', 'items_details.location_id', '=', 'locations.id')
-                ->select('sales.sales_date', 'contacts.name as contact_name', 'items_details.item_code', 'items.unit', 'locations.name as location_name', 'sales.doc_number', 'sales_details.qty as sales_qty', 'sales_details.price', 'sales_details.total', 'sales.status');
+                ->select('sales.sales_date', 'contacts.name as contact_name', 'items_details.item_code', 'items.unit', 'locations.name as location_name', 'sales.doc_number', 'sales_details.qty as sales_qty', 'sales_details.price', 'sales_details.total', 'sales.status')
+                ->where('sales_details.status', 1);
 
         if ($search != null)
         {
