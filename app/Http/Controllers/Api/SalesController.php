@@ -421,6 +421,7 @@ class SalesController extends Controller
                                     ->where('items_details.item_code', $item['item_code'])
                                     ->where('sales_details.status', 1)
                                     ->where('items_details.status', 1)
+                                    ->where('sales_details.sales_id', $sales->id)
                                     ->select('sales_details.id as id', 'sales_details.item_detail_id as item_detail_id')
                                     ->first();
     

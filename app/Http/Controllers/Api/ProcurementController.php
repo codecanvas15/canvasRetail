@@ -503,6 +503,7 @@ class ProcurementController extends Controller
                                         ->where('items_details.item_code', $item['item_code'])
                                         ->where('procurement_details.status', 1)
                                         ->where('items_details.status', 1)
+                                        ->where('procurement_details.procurement_id', $procurement->id)
                                         ->select('procurement_details.id as id', 'procurement_details.item_detail_id as item_detail_id')
                                         ->first();
         
