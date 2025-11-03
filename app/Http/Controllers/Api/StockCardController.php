@@ -439,7 +439,7 @@ class StockCardController extends Controller
                     $usage_total = $value;
                 }
 
-                if($item[$j]->procurement_date != null)
+                if($item[$j]->procurement_qty != null)
                 {
                     $saldoMasuk = $item[$j]->procurement_qty;
                 }
