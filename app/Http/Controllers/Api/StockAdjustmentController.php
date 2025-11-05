@@ -127,6 +127,8 @@ class StockAdjustmentController extends Controller
                         'item_detail_id'        => $itemDet->id,
                         'location_id'           => $item['location_id'],
                         'qty'                   => $item['qty'],
+                        'price'                 => $item['price'] ?? 0,
+                        'total'                 => isset($item['price']) ? ($item['price'] * $item['qty']) : 0,
                         'created_by'            => auth()->user()->id,
                         'updated_by'            => auth()->user()->id,
                         'status'                => 1
@@ -213,12 +215,12 @@ class StockAdjustmentController extends Controller
                 ]);
 
                 $description = "Approve Stock Adjustment\n
-            request : " . json_encode($request->all()) . "
-            response : Stock Adjustment Rejected". "\n
-            on " . date("Y-m-d H:i:s") . "
-            by " . auth()->user()->username;
+                request : " . json_encode($request->all()) . "
+                response : Stock Adjustment Rejected". "\n
+                on " . date("Y-m-d H:i:s") . "
+                by " . auth()->user()->username;
 
-            $this->history('stock_adjustment', 'approve stock adjustment', $description);
+                $this->history('stock_adjustment', 'approve stock adjustment', $description);
     
                 DB::commit();
     
