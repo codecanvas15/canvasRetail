@@ -15,6 +15,8 @@ class StockAdjustment extends Model
         'stock_adjustment_id',
         'item_detail_id',
         'qty',
+        'price',
+        'total',
         'created_by',
         'updated_by',
         'status'
