@@ -14,6 +14,8 @@ SELECT
     null as sales_total,
     null as adjustment_date,
     null as adjustment_qty,
+    null as adjustment_price,
+    null as adjustment_total,
     null as usage_date,
     null as usage_qty,
     pd.created_at as created_at,
@@ -43,6 +45,8 @@ SELECT
     sd.total as sales_total,
     null as adjustment_date,
     null as adjustment_qty,
+    null as adjustment_price,
+    null as adjustment_total,
     null as usage_date,
     null as usage_qty,
     sd.created_at as created_at,
@@ -72,6 +76,8 @@ SELECT
     null as sales_total,
     sah.transaction_date as adjustment_date,
     sa.qty as adjustment_qty,
+    sa.price as adjustment_price,
+    sa.total as adjustment_total,
     null as usage_date,
     null as usage_qty,
     sah.created_at as created_at,
@@ -81,7 +87,7 @@ FROM
     items i
     JOIN items_details id ON i.item_code = id.item_code and id.status = 1
     RIGHT JOIN stock_adjustment sa ON id.id = sa.item_detail_id and sa.status = 1
-    LEFT OUTER JOIN stock_adjustment_header sah ON sa.stock_adjustment_id = sah.id and sah.status IN (2,4)
+    LEFT OUTER JOIN stock_adjustment_header sah ON sa.stock_adjustment_id = sah.id and sah.status IN (1,2,4)
     JOIN locations l ON id.location_id = l.id and l.status = 1
 WHERE
     i.status = 1
@@ -101,6 +107,8 @@ SELECT
     null as sales_total,
     null as adjustment_date,
     null as adjustment_qty,
+    null as adjustment_price,
+    null as adjustment_total,
     suh.transaction_date as usage_date,
     su.qty as usage_qty,
     suh.created_at as created_at,
@@ -160,6 +168,8 @@ SELECT
         WHEN vt.adjustment_id is not null THEN vd.qty * -1
         ELSE null
     END as adjustment_qty,
+    null as adjustment_price,
+    null as adjustment_total,
     (
         SELECT
             suh.transaction_date
