@@ -96,7 +96,7 @@
                     <td>{{ $item->item_name }}</td>
                     <td>{{ $item->item_code }}</td>
                     <td>{{ $item->qty }}</td>
-                    <td>{{ $item->discount }}</td>
+                    <td>Rp.{{ number_format($item->discount, 2, ',', '.') }}</td>
                     <td>Rp.{{ number_format($item->price, 2, ',', '.') }}</td>
                     <td>Rp.{{ number_format($item->total, 2, ',', '.') }}</td>
                     @php $total_bruto += $item->total; @endphp
