@@ -294,7 +294,7 @@ class StockCardController extends Controller
             WHERE
                 a.item_code = ?
                 $where
-            ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
+            ORDER BY a.item_code, COALESCE(a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date)
         ", array_merge([$request->item_code], $params));
 
         $stockAwal = DB::select("
@@ -308,7 +308,7 @@ class StockCardController extends Controller
             WHERE
                 a.item_code = ?
                 $whereTxDate
-            ORDER BY a.item_code, a.created_at
+            ORDER BY a.item_code, a.tx_date
         ", array_merge([$request->item_code], $paramsStockAwal));
 
         $result = [];
@@ -350,8 +350,6 @@ class StockCardController extends Controller
                     $value = $saldoNominal / $saldoQty;
                 }
             }
-
-            $saldoNominal = ($value < 0 ? $value * -1 : $value) * $saldoQty;
 
             $result[$i]['saldo_qty']        = $saldoQty;
             $result[$i]['saldo_nominal']    = sprintf("%01.2f", $saldoNominal);
@@ -478,6 +476,16 @@ class StockCardController extends Controller
                 ];
             }
         }
+
+        foreach ($result as &$res) {
+            usort($res['items'], function ($a, $b) {
+                if ($a['transaction_date'] === null && $b['transaction_date'] === null) return 0;
+                if ($a['transaction_date'] === null) return 1;
+                if ($b['transaction_date'] === null) return -1;
+                return strtotime($b['transaction_date']) - strtotime($a['transaction_date']);
+            });
+        }
+        unset($res);
 
         return response()->json([
             "status"    => true,
