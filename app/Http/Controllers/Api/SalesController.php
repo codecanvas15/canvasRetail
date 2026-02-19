@@ -161,7 +161,7 @@ class SalesController extends Controller
                 'location_id'   => $request->location_id,
                 'reason'        => $request->notes ?? null,
                 'due_date'      => $dueDate,
-                'include_tax'   => $request->include_tax == 1 ? true : false
+                'include_tax'   => $request->include_tax == 1 ? 1 : 0
             ]);
 
             $totalAmount = 0.00;
@@ -408,7 +408,7 @@ class SalesController extends Controller
                 'reason'        => $request->notes ?? $sales->reason,
                 'due_date'      => $dueDate,
                 'tax'           => $totalTax,
-                'include_tax'   => $request->include_tax ?? $sales->include_tax
+                'include_tax'   => $request->has('include_tax') ? ($request->include_tax == 1 ? 1 : 0) : $sales->include_tax
             ]);
             
             $salesDet = SalesDetail::where('sales_id', $id)->where('status', 1)->get();
