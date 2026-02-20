@@ -410,8 +410,7 @@ class SalesController extends Controller
                 'tax'           => $totalTax,
                 'include_tax'   => $request->has('include_tax') ? ($request->include_tax == 1 ? 1 : 0) : $sales->include_tax
             ]);
-            
-            $salesDet = SalesDetail::where('sales_id', $id)->where('status', 1)->get();
+
             $totalAmount = 0;
             
             if ($request->itemDetails != null)
@@ -503,10 +502,9 @@ class SalesController extends Controller
             }
             else
             {
+                $salesDet = SalesDetail::where('sales_id', $sales->id)->where('status', 1)->get();
                 if ($request->location_id != $sales->location_id)
                 {
-                    $salesDet = SalesDetail::where('sales_id', $sales->id)->where('status', 1)->get();
-    
                     foreach ($salesDet as $item)
                     {
                         $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
@@ -539,36 +537,39 @@ class SalesController extends Controller
                             'updated_by'        => auth()->user()->id,
                             'updated_at'        => date("Y-m-d H:i:s")
                         ]);
+                    }
+                }
 
-                        if ($request->include_tax)
-                        {
-                            $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-                            
-                            $priceAfterDiscount = $item['price'] - $discount;
-        
-                            $itemPrice = $priceAfterDiscount / (1 + $tax/100);
-        
-                            $total = $item['qty'] * $itemPrice;
-                        }
-                        else
-                        {
-                            $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-        
-                            $priceAfterDiscount = $item['price'] - $discount;
-        
-                            $itemPrice = $priceAfterDiscount;
-        
-                            $total = $item['qty'] * $itemPrice;
-                        }
-        
-                        if ($request->include_tax)
-                        {
-                            $total = $item['qty'] * $itemPrice;
-                        }
-                        else
-                        {
-                            $total = $item['qty'] * $item['price'];
-                        }
+                foreach ($salesDet as $item)
+                {
+                    if ($request->include_tax)
+                    {
+                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+                        
+                        $priceAfterDiscount = $item['price'] - $discount;
+    
+                        $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+    
+                        $total = $item['qty'] * $itemPrice;
+                    }
+                    else
+                    {
+                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+    
+                        $priceAfterDiscount = $item['price'] - $discount;
+    
+                        $itemPrice = $priceAfterDiscount;
+    
+                        $total = $item['qty'] * $itemPrice;
+                    }
+    
+                    if ($request->include_tax)
+                    {
+                        $total = $item['qty'] * $itemPrice;
+                    }
+                    else
+                    {
+                        $total = $item['qty'] * $item['price'];
                     }
                 }
 

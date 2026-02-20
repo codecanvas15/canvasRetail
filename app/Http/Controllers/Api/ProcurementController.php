@@ -580,25 +580,14 @@ class ProcurementController extends Controller
                         
                         $totalAmount += ($total + $total * ($tax/100));
                     }
-
-                    if ($request->round != null)
-                    {
-                        $totalAmount -= $procurement->rounding;
-                        $totalAmount += $request->round;
-                    }
-                    else
-                    {
-                        $totalAmount += $procurement->rounding;
-                    }
                 }
                 else
                 {
                     $totalAmount = 0;
 
+                    $procurementDet = ProcurementDetail::where('procurement_id', $procurement->id)->where('status', 1)->get();
                     if ($request->location_id != $procurement->location_id)
                     {
-                        $procurementDet = ProcurementDetail::where('procurement_id', $procurement->id)->where('status', 1)->get();
-        
                         foreach ($procurementDet as $item)
                         {
                             $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->select('item_code')->first();
@@ -634,52 +623,49 @@ class ProcurementController extends Controller
                                 'updated_at'        => date("Y-m-d H:i:s")
                             ]);
 
-                            $discounts = explode('|', $procurementDet->discount);
-
-                            if ($request->include_tax)
-                            {
-                                $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
-                                foreach ($discounts as $discount)
-                                {
-                                    $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
-                                    
-                                    $priceAfterDiscount = $priceAfterDiscount - $discount;
-                                }
-            
-                                $itemPrice = $priceAfterDiscount / (1 + $tax/100);
-                                
-                                $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
-                            }
-                            else
-                            {
-                                $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
-                                foreach ($discounts as $discount)
-                                {
-                                    $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
-                                    
-                                    $priceAfterDiscount = $priceAfterDiscount - $discount;
-                                }
-            
-                                $itemPrice = $priceAfterDiscount;
-            
-                                $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
-                            }
-
-                            $totalAmount += ($total + $total * ($tax/100));
+                            
                         }
                     }
 
-                    if ($request->round != null)
+                    foreach ($procurementDet as $item)
                     {
-                        $totalAmount -= $procurement->rounding;
-                        $totalAmount += $request->round;
+                        $discounts = $item['discounts'] ?? explode('|', $item->discount);
+        
+                        if ($request->include_tax)
+                        {
+                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
+                            foreach ($discounts as $discount)
+                            {
+                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
+                                
+                                $priceAfterDiscount = $priceAfterDiscount - $discount;
+                            }
+        
+                            $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+                            
+                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
+                        }
+                        else
+                        {
+                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
+                            foreach ($discounts as $discount)
+                            {
+                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
+                                
+                                $priceAfterDiscount = $priceAfterDiscount - $discount;
+                            }
+        
+                            $itemPrice = $priceAfterDiscount;
+        
+                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
+                        }
+
+                        $totalAmount += ($total + $total * ($tax/100));
                     }
-                    else
-                    {
-                        $totalAmount += $procurement->rounding;
-                    }
+                    
                 }
 
+                $totalAmount += $request->round;
     
                 if ($request->rounding === 'down') 
                 {
