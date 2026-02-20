@@ -540,6 +540,36 @@ class SalesController extends Controller
                             'updated_by'        => auth()->user()->id,
                             'updated_at'        => date("Y-m-d H:i:s")
                         ]);
+
+                        if ($request->include_tax)
+                        {
+                            $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+                            
+                            $priceAfterDiscount = $item['price'] - $discount;
+        
+                            $itemPrice = $priceAfterDiscount / (1 + $tax/100);
+        
+                            $total = $item['qty'] * $itemPrice;
+                        }
+                        else
+                        {
+                            $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
+        
+                            $priceAfterDiscount = $item['price'] - $discount;
+        
+                            $itemPrice = $priceAfterDiscount;
+        
+                            $total = $item['qty'] * $itemPrice;
+                        }
+        
+                        if ($request->include_tax)
+                        {
+                            $total = $item['qty'] * $itemPrice;
+                        }
+                        else
+                        {
+                            $total = $item['qty'] * $item['price'];
+                        }
                     }
 
                     $salesDet->update([
@@ -549,7 +579,7 @@ class SalesController extends Controller
                     ]);
                 }
 
-                $totalAmount = $sales->amount;
+                $totalAmount += ($total + $total * ($tax/100));
             }
 
             $totalAmount += $request->round;
