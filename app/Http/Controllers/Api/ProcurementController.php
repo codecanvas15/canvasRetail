@@ -629,6 +629,7 @@ class ProcurementController extends Controller
                             
                             $item->update([
                                 'item_detail_id'    => $itemDet->id,
+                                'location_id'       => $request->location_id,
                                 'updated_by'        => auth()->user()->id,
                                 'updated_at'        => date("Y-m-d H:i:s")
                             ]);
@@ -666,12 +667,6 @@ class ProcurementController extends Controller
 
                             $totalAmount += ($total + $total * ($tax/100));
                         }
-
-                        $procurementDet->update([
-                            'location_id'   => $request->location_id,
-                            'updated_by'    => auth()->user()->id,
-                            'updated_at'    => date("Y-m-d H:i:s")
-                        ]);
                     }
 
                     if ($request->round != null)

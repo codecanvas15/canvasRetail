@@ -509,7 +509,7 @@ class SalesController extends Controller
     
                     foreach ($salesDet as $item)
                     {
-                        $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->select('item_code')->first();
+                        $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
                         
                         if ($itemDet == null)
                         {
@@ -519,8 +519,6 @@ class SalesController extends Controller
                                 "message" => "Item not found"
                             ], 404);
                         }
-    
-                        $itemDet = ItemDetail::where('item_code', $itemDet->item_code)->where('location_id', $request->location_id)->where('status', 1)->first();
 
                         if ($itemDet == null)
                         {
@@ -537,6 +535,7 @@ class SalesController extends Controller
                         
                         $item->update([
                             'item_detail_id'    => $itemDet->id,
+                            'location_id'       => $request->location_id,
                             'updated_by'        => auth()->user()->id,
                             'updated_at'        => date("Y-m-d H:i:s")
                         ]);
@@ -571,12 +570,6 @@ class SalesController extends Controller
                             $total = $item['qty'] * $item['price'];
                         }
                     }
-
-                    $salesDet->update([
-                        'location_id'   => $request->location_id,
-                        'updated_by'    => auth()->user()->id,
-                        'updated_at'    => date("Y-m-d H:i:s")
-                    ]);
                 }
 
                 $totalAmount += ($total + $total * ($tax/100));
