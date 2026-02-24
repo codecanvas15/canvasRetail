@@ -286,11 +286,11 @@ class PaymentController extends Controller
             }
 
             $contact = Contact::where('id', $sales->contact_id)->first();
-            $paymentDet = DB::table('payment')
-                ->join('sales', 'sales.id', '=', 'payment.sales_id')
-                ->select('sales.id', 'sales.doc_number', 'sales.sales_date', DB::raw('SUM(payment.amount) as amount'), DB::raw('sales.amount - SUM(payment.amount) as outstanding', 'sales.status'))
-                ->whereIn('payment.sales_id', $id)
-                ->groupBy('sales.id', 'sales.doc_number', 'sales.sales_date')
+            $paymentDet = DB::table('sales')
+                ->leftJoin('payment', 'sales.id', '=', 'payment.sales_id')
+                ->select('sales.id', 'sales.doc_number', 'sales.sales_date', DB::raw('COALESCE(SUM(sales.amount), 0) as amount'), DB::raw('sales.amount - COALESCE(SUM(payment.amount), 0) as outstanding'), 'sales.status')
+                ->whereIn('sales.id', $id)
+                ->groupBy('sales.id', 'sales.doc_number', 'sales.sales_date', 'sales.amount', 'sales.status')
                 ->get();
 
             $date = new DateTime('now');
