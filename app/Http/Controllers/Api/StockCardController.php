@@ -16,8 +16,8 @@ class StockCardController extends Controller
     public function getStockCardList(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "start_date"  => ['date_format:d-m-Y'],
-            "end_date"  => ['date_format:d-m-Y'],
+            "start_date"  => ['date_format:m-Y'],
+            "end_date"  => ['date_format:m-Y'],
             "location_id" => ['nullable', 'integer']
         ]);
 
@@ -28,8 +28,8 @@ class StockCardController extends Controller
             ]);
         }
 
-        $startDate = DateTime::createFromFormat('d-m-Y', $request->start_date);
-        $endDate = DateTime::createFromFormat('d-m-Y', $request->end_date);
+        $startDate = $request->start_date ? DateTime::createFromFormat('!m-Y', $request->start_date)->modify('first day of this month') : null;
+        $endDate = $request->end_date ? DateTime::createFromFormat('!m-Y', $request->end_date)->modify('last day of this month') : null;
 
         if ($startDate > $endDate) {
             return response()->json([
@@ -195,8 +195,8 @@ class StockCardController extends Controller
     public function getStockCardDetails(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "start_date"  => ['date_format:d-m-Y'],
-            "end_date"  => ['date_format:d-m-Y'],
+            "start_date"  => ['date_format:m-Y'],
+            "end_date"  => ['date_format:m-Y'],
             "item_code"   => ['required']
         ]);
 
@@ -207,8 +207,8 @@ class StockCardController extends Controller
             ]);
         }
 
-        $startDate = DateTime::createFromFormat('d-m-Y', $request->start_date);
-        $endDate = DateTime::createFromFormat('d-m-Y', $request->end_date);
+        $startDate = $request->start_date ? DateTime::createFromFormat('!m-Y', $request->start_date)->modify('first day of this month') : null;
+        $endDate = $request->end_date ? DateTime::createFromFormat('!m-Y', $request->end_date)->modify('last day of this month') : null;
 
         if ($startDate > $endDate) {
             return response()->json([
@@ -257,7 +257,7 @@ class StockCardController extends Controller
         }
 
         if ($request->location_id) {
-            if ($where == '') {
+            if ($where != '') {
                 $where .= ' AND ';
                 $whereTxDate .= ' AND ';
             }
@@ -378,11 +378,21 @@ class StockCardController extends Controller
             for($j = 0; $j < sizeof($item); $j++)
             {
                 $initQty = $saldoQty;
-                $saldoQty = $saldoQty + ($item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ($item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ($item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ($item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
+                $saldoQty = $saldoQty + ((float)$item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ((float)$item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ((float)$item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ((float)$item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
+
+                // if ($item[$j]->doc_number == 'STOCK AWAL')
+                // {
+                //     dd($saldoQty);
+                // }
 
                 if ($item[$j]->procurement_total != null || $item[$j]->adjustment_total != null)
                 {
                     $saldoNominal = (($value * $initQty) + $item[$j]->procurement_total + ($item[$j]->adjustment_total != null ? $item[$j]->adjustment_total : 0));
+
+                    // if ($item[$j]->doc_number == 'STOCK AWAL')
+                    // {
+                    //     dd($saldoNominal, $saldoQty);
+                    // }
 
                     if ($saldoQty != 0)
                     {

@@ -846,32 +846,17 @@ class ReportController extends Controller
         $validator = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
-            // 'type' => 'required|in:display,excel'
         ]);
 
         if ($validator->fails()) {
-            $errorMsg = '';
-            
-            foreach ($validator->errors()->all() as $error)
-            {
-                $errorMsg .= $error . '<br>';
-            }
-            
             return response()->json([
                 "status" => false,
-                "message" => $errorMsg
+                "message" => implode('<br>', $validator->errors()->all())
             ], 400);
         }
 
-        $startDate = $request->input('start_date', null);
-        $endDate = $request->input('end_date', null);
-
-        $locationCondition = '';
-        $locationParams = [];
-        if ($request->location_id) {
-            $locationCondition = 'AND a.location_id = ?';
-            $locationParams[] = $request->location_id;
-        }
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
 
         if ($startDate > $endDate) {
             return response()->json([
@@ -880,26 +865,26 @@ class ReportController extends Controller
             ], 400);
         }
 
-        $items = Item::where('status', 1)->get();
+        $locationCondition = '';
+        $locationParams = [];
+        if ($request->location_id) {
+            $locationCondition = 'AND a.location_id = ?';
+            $locationParams[] = $request->location_id;
+        }
+
+        // Only select the columns we actually need from items
+        $items = Item::where('status', 1)->select('item_code', 'name')->get();
 
         $stock = DB::select("
             SELECT
                 a.item_code,
-                a.item_name,
-                a.location_name,
                 COALESCE(a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date) as tx_date,
-                a.procurement_date,
                 a.procurement_qty,
                 a.procurement_total,
-                a.sales_date,
                 a.sales_qty,
-                a.sales_total,
-                a.adjustment_date,
                 a.adjustment_qty,
-                a.usage_date,
                 a.usage_qty,
                 a.doc_number,
-                a.location_id,
                 l.name as location_name,
                 a.created_at
             FROM 
@@ -932,7 +917,7 @@ class ReportController extends Controller
             WHERE
                 a.tx_date < ?
                 $locationCondition
-            ORDER BY a.item_code, a.created_at
+            ORDER BY a.item_code, a.tx_date
         ", array_merge([$startDate], $locationParams));
 
         $stockAwal = collect($stockAwal)->groupBy('item_code');
@@ -941,38 +926,34 @@ class ReportController extends Controller
         $stockCard = [];
 
         foreach ($items as $value) 
-        {            
+        {
             $stockItem = $stock->get($value->item_code) ?? collect();
-
             $stockInitial = $stockAwal->get($value->item_code) ?? collect();
-            // dd($stockInitial);
+
+            // Skip items with no stock data and no initial balance
+            if ($stockItem->isEmpty() && $stockInitial->isEmpty()) {
+                continue;
+            }
 
             $stockValue = 0;
-            $saldoQty       = 0;
-            $saldoNominal   = 0;
-            $procurement_qty = 0;
+            $saldoQty = 0;
+            $saldoNominal = 0;
 
-            foreach ($stockInitial as $key => $itemDet) 
+            foreach ($stockInitial as $itemDet) 
             {
                 $qty = (int)$itemDet->saldo_qty;
-                if ((int)$itemDet->saldo_nominal == 0)
-                {
-                    $saldoNominal += $stockValue * $qty;
-                }
-                else
-                {
-                    $saldoNominal += (int)$itemDet->saldo_nominal;
-                }
+                $saldoNominal += ((int)$itemDet->saldo_nominal == 0)
+                    ? $stockValue * $qty
+                    : (int)$itemDet->saldo_nominal;
                 
                 $saldoQty += $qty;
                 
-                if ($saldoQty != 0)
-                {
+                if ($saldoQty != 0) {
                     $stockValue = $saldoNominal / $saldoQty;
                 }
             }
 
-            $saldoNominal = ($stockValue < 0 ? $stockValue * -1 : $stockValue) * $saldoQty;
+            $saldoNominal = abs($stockValue) * $saldoQty;
 
             $stockCard[$value->item_code] = [
                 'item_name' => $value->name,
@@ -993,65 +974,63 @@ class ReportController extends Controller
         $sheet->getStyle('A1')->getAlignment()->setWrapText(true);
         $sheet->getStyle('A1')->getFont()->setBold(true);
 
-        $sheet->mergeCells('A3:M3');
+        $sheet->mergeCells('A3:N3');
         $sheet->setCellValue('A3', 'STOCK VALUE REPORT');
         $sheet->getStyle('A3')->getFont()->setBold(true);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        $sheet->mergeCells('A4:M4');
+        $sheet->mergeCells('A4:N4');
         $sheet->setCellValue('A4', 'TANGGAL : ' . $startDateFormated . '/' . $endDateFormated);
         $sheet->getStyle('A4')->getFont()->setBold(true);
         $sheet->getStyle('A4')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         $sheet->mergeCells('A6:A7');
         $sheet->setCellValue('A6', 'Tanggal Dokumen');
-
         $sheet->mergeCells('B6:B7');
         $sheet->setCellValue('B6', 'Tanggal');
-
         $sheet->mergeCells('C6:C7');
-        $sheet->setCellValue('C6', 'Item');
-
+        $sheet->setCellValue('C6', 'Item Name');
         $sheet->mergeCells('D6:D7');
-        $sheet->setCellValue('D6', 'Gudang');
-
+        $sheet->setCellValue('D6', 'Kode Item');
         $sheet->mergeCells('E6:E7');
-        $sheet->setCellValue('E6', 'Keterangan');
-
+        $sheet->setCellValue('E6', 'Gudang');
         $sheet->mergeCells('F6:F7');
-        $sheet->setCellValue('F6', 'Kode Dokumen');
+        $sheet->setCellValue('F6', 'Keterangan');
+        $sheet->mergeCells('G6:G7');
+        $sheet->setCellValue('G6', 'Kode Dokumen');
 
-        $sheet->mergeCells('G6:H6');
-        $sheet->setCellValue('G6', 'Stock Masuk');
-        $sheet->setCellValue('G7', 'Qty');
-        $sheet->setCellValue('H7', 'NilaiQty');
+        $sheet->mergeCells('H6:I6');
+        $sheet->setCellValue('H6', 'Stock Masuk');
+        $sheet->setCellValue('H7', 'Qty');
+        $sheet->setCellValue('I7', 'NilaiQty');
 
-        $sheet->mergeCells('I6:J6');
-        $sheet->setCellValue('I6', 'Stock Keluar');
-        $sheet->setCellValue('I7', 'Qty');
-        $sheet->setCellValue('J7', 'Nilai');
+        $sheet->mergeCells('J6:K6');
+        $sheet->setCellValue('J6', 'Stock Keluar');
+        $sheet->setCellValue('J7', 'Qty');
+        $sheet->setCellValue('K7', 'Nilai');
 
-        $sheet->mergeCells('K6:L6');
-        $sheet->setCellValue('K6', 'Saldo');
-        $sheet->setCellValue('K7', 'Qty');
-        $sheet->setCellValue('L7', 'Nilai');
+        $sheet->mergeCells('L6:M6');
+        $sheet->setCellValue('L6', 'Saldo');
+        $sheet->setCellValue('L7', 'Qty');
+        $sheet->setCellValue('M7', 'Nilai');
 
-        $sheet->mergeCells('M6:M7');
-        $sheet->setCellValue('M6', 'Value');
+        $sheet->mergeCells('N6:N7');
+        $sheet->setCellValue('N6', 'Value');
 
-        $sheet->getStyle('A6:M7')->getFont()->setBold(true);
+        $sheet->getStyle('A6:N7')->getFont()->setBold(true);
+
         $row = 8;
-        // dd($stockCard);
-        foreach($stockCard as $item)
+        $dataStartRow = $row; // Track where data starts for bulk formatting
+
+        foreach ($stockCard as $item)
         {
             $sheet->setCellValue('A' . $row, 'Saldo Awal ' . $item['item_name'] . ' (' . $item['item_code'] . ')');
             $sheet->getStyle('A' . $row)->getFont()->setBold(true);
-            $sheet->setCellValue('K' . $row, $item['saldo_qty']);
-            $sheet->setCellValue('L' . $row, $item['saldo_nominal']);
-            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('_-"Rp"* #,##0.00_-;-"Rp"* #,##0.00_-;_-"Rp"* "-"??_-;_-@_-');
-            $sheet->setCellValue('M' . $row, $item['stock_value']);
-            $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('_-"Rp"* #,##0.00_-;-"Rp"* #,##0.00_-;_-"Rp"* "-"??_-;_-@_-');
+            $sheet->setCellValue('L' . $row, $item['saldo_qty']);
+            $sheet->setCellValue('M' . $row, $item['saldo_nominal']);
+            $sheet->setCellValue('N' . $row, $item['stock_value']);
             $row++;
+
             $stockValue = $item['stock_value'];
             $stockQty = $item['saldo_qty'];
             
@@ -1061,85 +1040,45 @@ class ReportController extends Controller
                 $stockMasukValue = 0;
                 $stockKeluarQty = 0;
                 $stockKeluarValue = 0;
+
                 $sheet->setCellValue('A' . $row, $stock->created_at);
                 $sheet->setCellValue('B' . $row, $stock->tx_date);
-                $sheet->setCellValue('C' . $row, $item['item_name'] . ' (' . $item['item_code'] . ')');
-                $sheet->setCellValue('D' . $row, $stock->location_name);
+                $sheet->setCellValue('C' . $row, $item['item_name']);
+                $sheet->setCellValue('D' . $row, $item['item_code']);
+                $sheet->setCellValue('E' . $row, $stock->location_name);
                 
                 if ($stock->procurement_qty !== null || (int)$stock->adjustment_qty > 0 || (int)$stock->usage_qty < 0)
                 {
                     $stockMasukQty = $stock->procurement_qty + $stock->adjustment_qty - (int)$stock->usage_qty;
-                    $stockQty = $stockQty +  $stock->procurement_qty + $stock->adjustment_qty - (int)$stock->usage_qty;
+                    $stockQty += $stockMasukQty;
 
-                    if ($stock->procurement_qty !== null)
-                    {
-                        $stockMasukValue = $stock->procurement_total;
-                    }
-                    else
-                    {
-                        $stockMasukValue = $stockMasukQty * $stockValue;
-                    }
+                    $stockMasukValue = ($stock->procurement_qty !== null)
+                        ? $stock->procurement_total
+                        : $stockMasukQty * $stockValue;
 
-                    if ($stockQty != 0)
-                    {
+                    if ($stockQty != 0) {
                         $stockValue = (($stockValue * $item['saldo_qty']) + $stockMasukValue) / $stockQty;
                     }
                 }
                 
-                if ($stock->sales_qty !== null || (int)$stock->usage_qty > 0|| (int)$stock->adjustment_qty < 0)
+                if ($stock->sales_qty !== null || (int)$stock->usage_qty > 0 || (int)$stock->adjustment_qty < 0)
                 {
                     $stockKeluarQty = $stock->sales_qty + (int)$stock->usage_qty - (int)$stock->adjustment_qty;
-
                     $stockQty -= $stockKeluarQty;
-
                     $stockKeluarValue = $stockValue * $stockKeluarQty;
                 }
 
-                if ($stock->procurement_qty !== null && strpos($stock->doc_number, 'VOID') === false)
-                {
-                    $sheet->setCellValue('E' . $row, 'Item Procurements');
-                }
-                else if ($stock->procurement_qty !== null && strpos($stock->doc_number, 'VOID') !== false)
-                {
-                    $sheet->setCellValue('E' . $row, 'VOID Item Sales');
-                }
-                else if ($stock->sales_qty !== null && strpos($stock->doc_number, 'VOID') === false)
-                {
-                    $sheet->setCellValue('E' . $row, 'Item Sales');
-                }
-                else if ($stock->sales_qty !== null && strpos($stock->doc_number, 'VOID') !== false)
-                {
-                    $sheet->setCellValue('E' . $row, 'VOID Item Procurements');
-                }
-                else if ($stock->adjustment_qty !== null && strpos($stock->doc_number, 'VOID') === false)
-                {
-                    $sheet->setCellValue('E' . $row, 'Item Adjustment');
-                }
-                else if ($stock->adjustment_qty !== null && strpos($stock->doc_number, 'VOID') !== false)
-                {
-                    $sheet->setCellValue('E' . $row, 'VOID Item Adjustment');
-                }
-                else if ($stock->usage_qty !== null && strpos($stock->doc_number, 'VOID') === false)
-                {
-                    $sheet->setCellValue('E' . $row, 'Item Usage');
-                }
-                else if ($stock->usage_qty !== null && strpos($stock->doc_number, 'VOID') !== false)
-                {
-                    $sheet->setCellValue('E' . $row, 'VOID Item Usage');
-                }
+                // Determine transaction description
+                $sheet->setCellValue('F' . $row, $this->getStockTransactionLabel($stock));
                 
-                $sheet->setCellValue('F' . $row, $stock->doc_number);
-                $sheet->setCellValue('G' . $row, $stockMasukQty);
-                $sheet->setCellValue('H' . $row, $stockMasukValue);
-                $sheet->getStyle('H' . $row)->getNumberFormat()->setFormatCode('_-"Rp"* #,##0.00_-;-"Rp"* #,##0.00_-;_-"Rp"* "-"??_-;_-@_-');
-                $sheet->setCellValue('I' . $row, $stockKeluarQty);
-                $sheet->setCellValue('J' . $row, $stockKeluarValue);
-                $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('_-"Rp"* #,##0.00_-;-"Rp"* #,##0.00_-;_-"Rp"* "-"??_-;_-@_-');
-                $sheet->setCellValue('K' . $row, $stockQty);
-                $sheet->setCellValue('L' . $row, $stockQty * $stockValue);
-                $sheet->getStyle('L' . $row)->getNumberFormat()->setFormatCode('_-"Rp"* #,##0.00_-;-"Rp"* #,##0.00_-;_-"Rp"* "-"??_-;_-@_-');
-                $sheet->setCellValue('M' . $row, $stockValue);
-                $sheet->getStyle('M' . $row)->getNumberFormat()->setFormatCode('_-"Rp"* #,##0.00_-;-"Rp"* #,##0.00_-;_-"Rp"* "-"??_-;_-@_-');
+                $sheet->setCellValue('G' . $row, $stock->doc_number);
+                $sheet->setCellValue('H' . $row, $stockMasukQty);
+                $sheet->setCellValue('I' . $row, $stockMasukValue);
+                $sheet->setCellValue('J' . $row, $stockKeluarQty);
+                $sheet->setCellValue('K' . $row, $stockKeluarValue);
+                $sheet->setCellValue('L' . $row, $stockQty);
+                $sheet->setCellValue('M' . $row, $stockQty * $stockValue);
+                $sheet->setCellValue('N' . $row, $stockValue);
 
                 $row++;
             }
@@ -1147,19 +1086,24 @@ class ReportController extends Controller
             $row += 2;
         }
 
-        $sheet->getColumnDimension('A')->setWidth(22);
-        $sheet->getColumnDimension('B')->setWidth(22);
-        $sheet->getColumnDimension('C')->setWidth(45);
-        $sheet->getColumnDimension('D')->setWidth(20);
-        $sheet->getColumnDimension('E')->setWidth(30);
-        $sheet->getColumnDimension('F')->setWidth(25);
-        $sheet->getColumnDimension('G')->setWidth(8);
-        $sheet->getColumnDimension('H')->setWidth(15);
-        $sheet->getColumnDimension('I')->setWidth(8);
-        $sheet->getColumnDimension('J')->setWidth(25);
-        $sheet->getColumnDimension('K')->setWidth(8);
-        $sheet->getColumnDimension('L')->setWidth(25);
-        $sheet->getColumnDimension('M')->setWidth(25);
+        // Apply Rupiah number format to entire data columns at once (much faster than per-cell)
+        $rpFormat = '_-"Rp"* #,##0.00_-;-"Rp"* #,##0.00_-;_-"Rp"* "-"??_-;_-@_-';
+        $lastDataRow = max($row - 1, $dataStartRow);
+        foreach (['I', 'K', 'M', 'N'] as $col) {
+            $sheet->getStyle("{$col}{$dataStartRow}:{$col}{$lastDataRow}")
+                  ->getNumberFormat()
+                  ->setFormatCode($rpFormat);
+        }
+
+        // Set column widths
+        $columnWidths = [
+            'A' => 22, 'B' => 22, 'C' => 30, 'D' => 20, 'E' => 20, 'F' => 30,
+            'G' => 25, 'H' => 8,  'I' => 15, 'J' => 8,  'K' => 25,
+            'L' => 8,  'M' => 25, 'N' => 25,
+        ];
+        foreach ($columnWidths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
 
         $directory = public_path('report/stockvalue');
         if (!File::exists($directory)) {
@@ -1169,7 +1113,6 @@ class ReportController extends Controller
         $filename = 'stockvalue_report_' . $startDateFormated . '_' . $endDateFormated . '.xlsx';
         $filePath = $directory . '/' . $filename;
 
-        // Save the spreadsheet to a file
         $writer = new Xlsx($spreadsheet);
         $writer->save($filePath);
 
@@ -1178,6 +1121,29 @@ class ReportController extends Controller
             'message' => 'Report generated successfully',
             'file' => url('report/stockvalue/' . $filename)
         ]);
+    }
+
+    /**
+     * Get the human-readable transaction label for a stock record.
+     */
+    private function getStockTransactionLabel($stock): string
+    {
+        $isVoid = strpos($stock->doc_number, 'VOID') !== false;
+
+        $labels = [
+            'procurement' => ['Item Procurements', 'VOID Item Sales'],
+            'sales'       => ['Item Sales', 'VOID Item Procurements'],
+            'adjustment'  => ['Item Adjustment', 'VOID Item Adjustment'],
+            'usage'       => ['Item Usage', 'VOID Item Usage'],
+        ];
+
+        foreach ($labels as $type => [$normal, $void]) {
+            if ($stock->{$type . '_qty'} !== null) {
+                return $isVoid ? $void : $normal;
+            }
+        }
+
+        return '';
     }
 
     public function getQueue(Request $request)
