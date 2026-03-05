@@ -195,8 +195,8 @@ class StockCardController extends Controller
     public function getStockCardDetails(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            "start_date"  => ['date_format:m-Y'],
-            "end_date"  => ['date_format:m-Y'],
+            "start_month"  => ['date_format:m-Y'],
+            "end_month"  => ['date_format:m-Y'],
             "item_code"   => ['required']
         ]);
 
@@ -207,8 +207,8 @@ class StockCardController extends Controller
             ]);
         }
 
-        $startDate = $request->start_date ? DateTime::createFromFormat('!m-Y', $request->start_date)->modify('first day of this month') : null;
-        $endDate = $request->end_date ? DateTime::createFromFormat('!m-Y', $request->end_date)->modify('last day of this month') : null;
+        $startDate = $request->start_month ? DateTime::createFromFormat('!m-Y', $request->start_month)->modify('first day of this month') : null;
+        $endDate = $request->end_month ? DateTime::createFromFormat('!m-Y', $request->end_month)->modify('last day of this month') : null;
 
         if ($startDate > $endDate) {
             return response()->json([
@@ -221,12 +221,12 @@ class StockCardController extends Controller
         $filterStartDate = $date->modify('first day of this Month')->format('Y-m-d');
         $filterEndDate = $date->modify('last day of this Month')->format('Y-m-d');
 
-        if ($request->start_date)
+        if ($request->start_month)
         {
             $filterStartDate = $startDate->format('Y-m-d');
         }
 
-        if ($request->end_date)
+        if ($request->end_month)
         {
             $filterEndDate = $endDate->format('Y-m-d');
         }
@@ -235,7 +235,7 @@ class StockCardController extends Controller
         $whereTxDate = '';
         $params = [];
         $paramsStockAwal = [];
-        if ($request->start_date && $request->end_date)
+        if ($request->start_month && $request->end_month)
         {
             $where = '(
                     a.procurement_date >= ?
