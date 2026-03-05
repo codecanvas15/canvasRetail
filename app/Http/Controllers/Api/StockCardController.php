@@ -231,13 +231,13 @@ class StockCardController extends Controller
             $filterEndDate = $endDate->format('Y-m-d');
         }
 
-        $where = 'AND ';
-        $whereTxDate = 'AND ';
+        $where = '';
+        $whereTxDate = '';
         $params = [];
         $paramsStockAwal = [];
         if ($request->start_date && $request->end_date)
         {
-            $where .= '(
+            $where = '(
                     a.procurement_date >= ?
                     or a.sales_date >= ?
                     or a.adjustment_date >= ?
@@ -252,7 +252,7 @@ class StockCardController extends Controller
 
             $params = [$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate];
 
-            $whereTxDate .= 'a.tx_date < ?';
+            $whereTxDate = 'a.tx_date < ?';
             $paramsStockAwal = [$filterStartDate];
         }
 
@@ -265,6 +265,13 @@ class StockCardController extends Controller
             $whereTxDate .= 'a.location_id = ?';
             array_push($params, $request->location_id);
             array_push($paramsStockAwal, $request->location_id);
+        }
+
+        if ($where != '') {
+            $where = 'AND ' . $where;
+        }
+        if ($whereTxDate != '') {
+            $whereTxDate = 'AND ' . $whereTxDate;
         }
 
         Config::set('database.connections.'. config('database.default') .'.strict', false);
