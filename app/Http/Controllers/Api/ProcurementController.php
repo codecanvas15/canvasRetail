@@ -825,73 +825,61 @@ class ProcurementController extends Controller
         $startProcurementDate = $request->input('search_start_procurement_date', null);
         $endProcurementDate = $request->input('search_end_procurement_date', null);
 
-        if ($startProcurementDate > $endProcurementDate) {
+        if ($startProcurementDate != null && $endProcurementDate != null && $startProcurementDate > $endProcurementDate) {
             return response()->json([
                 "status" => false,
                 "message" => "The start date cannot be after the end date."
             ], 400);
         }
 
-
         if (!in_array($sortOrder, ['asc', 'desc'])) {
-            $sortOrder = 'desc'; // Default to ascending if invalid
+            $sortOrder = 'desc';
         }
 
-        $query  = Procurement::query();
+        $query = Procurement::query();
 
         $query->join('contacts', 'procurements.contact_id', '=', 'contacts.id')
-                ->select('procurements.*', 'contacts.name as contact_name');
+              ->select('procurements.*', 'contacts.name as contact_name');
 
-        if ($search != null)
-        {
-            $query->where('contacts.name', 'like', '%' . $search . '%');
-            $query->orWhere('procurements.doc_number', 'like', '%' . $search . '%');
-            $query->orWhere('procurements.external_doc_no', 'like', '%' . $search . '%');
-            $query->orWhere('procurements.pay_status', 'like', '%' . $search . '%');
+        // Text search — grouped so orWhere doesn't bypass other filters
+        if ($search != null) {
+            $query->where(function ($q) use ($search) {
+                $q->where('contacts.name', 'like', '%' . $search . '%')
+                  ->orWhere('procurements.doc_number', 'like', '%' . $search . '%')
+                  ->orWhere('procurements.external_doc_no', 'like', '%' . $search . '%')
+                  ->orWhere('procurements.pay_status', 'like', '%' . $search . '%');
+            });
         }
-        else
-        {
-            if ($searchVendor != null)
-            {
-                $query->where('contacts.id', $searchVendor);
-            }
 
-            if ($searchDocNumber != null)
-            {
-                $query->where('procurements.doc_number', 'like', '%' . $searchDocNumber . '%');
-                $query->orWhere('procurements.external_doc_no', 'like', '%' . $searchDocNumber . '%');
-            }
+        if ($searchVendor != null) {
+            $query->where('contacts.id', $searchVendor);
+        }
 
-            if ($startProcurementDate != null && $endProcurementDate != null)
-            {
-                $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
-            }
+        if ($searchDocNumber != null) {
+            $query->where(function ($q) use ($searchDocNumber) {
+                $q->where('procurements.doc_number', 'like', '%' . $searchDocNumber . '%')
+                  ->orWhere('procurements.external_doc_no', 'like', '%' . $searchDocNumber . '%');
+            });
+        }
 
-            if ($searchVendor == null && $searchDocNumber == null && $startProcurementDate == null && $endProcurementDate == null)
-            {
-                $startProcurementDate = (new DateTime($startProcurementDate))->modify('first day of this month')->format('Y-m-d');
-                $date = new DateTime('now');
-                $endProcurementDate = $date->format('Y-m-d');
-                $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
-            }
+        if ($startProcurementDate != null && $endProcurementDate != null) {
+            $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
+        } elseif ($searchVendor == null && $searchDocNumber == null) {
+            // Default to current month when no filters provided
+            $startProcurementDate = (new DateTime('now'))->modify('first day of this month')->format('Y-m-d');
+            $endProcurementDate = (new DateTime('now'))->format('Y-m-d');
+            $query->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
+        }
 
-            if ($searchStatus != null)
-            {
-                $query->where('procurements.status', $searchStatus);
-            }
+        if ($searchStatus != null) {
+            $query->where('procurements.status', $searchStatus);
+        }
 
-            if ($searchPaymentStatus != null)
-            {
-                $query->where('procurements.pay_status', $searchPaymentStatus);
-            }
+        if ($searchPaymentStatus != null) {
+            $query->where('procurements.pay_status', $searchPaymentStatus);
         }
 
         $procurement = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
-        $procurement->appends([
-            'sort_by' => $sortBy,
-            'sort_order' => $sortOrder,
-        ]);
-
         $procurement->appends($request->all());
 
         return response()->json([

@@ -723,22 +723,19 @@ class SalesController extends Controller
         $startSalesDate = $request->input('search_start_sales_date', null);
         $endSalesDate = $request->input('search_end_sales_date', null);
 
-        if ($startSalesDate != null && $endSalesDate == null)
-        {
+        if ($startSalesDate != null && $endSalesDate == null) {
             return response()->json([
                 "status" => false,
                 "message" => "The end date cannot be empty."
             ], 400);
-        }
-        else if ($startSalesDate == null && $endSalesDate != null)
-        {
+        } elseif ($startSalesDate == null && $endSalesDate != null) {
             return response()->json([
                 "status" => false,
                 "message" => "The start date cannot be empty."
             ], 400);
         }
 
-        if ($startSalesDate > $endSalesDate) {
+        if ($startSalesDate != null && $endSalesDate != null && $startSalesDate > $endSalesDate) {
             return response()->json([
                 "status" => false,
                 "message" => "The start date cannot be after the end date."
@@ -746,61 +743,49 @@ class SalesController extends Controller
         }
 
         if (!in_array($sortOrder, ['asc', 'desc'])) {
-            $sortOrder = 'desc'; // Default to ascending if invalid
+            $sortOrder = 'desc';
         }
 
-        $query  = Sales::query();
+        $query = Sales::query();
 
         $query->join('contacts', 'sales.contact_id', '=', 'contacts.id')
               ->select('sales.*', 'contacts.name as contact_name');
 
-        if ($search != null)
-        {
-            $query->where('contacts.name', 'like', '%' . $search . '%');
-            $query->orWhere('sales.doc_number', 'like', '%' . $search . '%');
-            $query->orWhere('sales.pay_status', 'like', '%' . $search . '%');
+        // Text search — grouped so orWhere doesn't bypass other filters
+        if ($search != null) {
+            $query->where(function ($q) use ($search) {
+                $q->where('contacts.name', 'like', '%' . $search . '%')
+                  ->orWhere('sales.doc_number', 'like', '%' . $search . '%')
+                  ->orWhere('sales.pay_status', 'like', '%' . $search . '%');
+            });
         }
-        else
-        {
-            if ($searchCustomer != null)
-            {
-                $query->where('contacts.id', $searchCustomer);
-            }
-            if ($searchDocNumber != null)
-            {
-                $query->where('sales.doc_number', 'like', '%' . $searchDocNumber . '%');
-            }
 
-            if ($startSalesDate != null && $endSalesDate != null)
-            {
-                $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
-            }
+        if ($searchCustomer != null) {
+            $query->where('contacts.id', $searchCustomer);
+        }
 
-            if ($searchPaymentStatus != null)
-            {
-                $query->where('sales.pay_status', 'like',  $searchPaymentStatus);
-            }
+        if ($searchDocNumber != null) {
+            $query->where('sales.doc_number', 'like', '%' . $searchDocNumber . '%');
+        }
 
-            if ($searchCustomer == null && $searchDocNumber == null && $startSalesDate == null && $endSalesDate == null)
-            {
-                $startSalesDate = (new DateTime($startSalesDate))->modify('first day of this month')->format('Y-m-d');
-                $date = new DateTime('now');
-                $endSalesDate = $date->format('Y-m-d');
-                $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
-            }
+        if ($startSalesDate != null && $endSalesDate != null) {
+            $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
+        } elseif ($searchCustomer == null && $searchDocNumber == null) {
+            // Default to current month when no filters provided
+            $startSalesDate = (new DateTime('now'))->modify('first day of this month')->format('Y-m-d');
+            $endSalesDate = (new DateTime('now'))->format('Y-m-d');
+            $query->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
+        }
 
-            if ($searchStatus != null)
-            {
-                $query->where('sales.status', $searchStatus);
-            }
+        if ($searchPaymentStatus != null) {
+            $query->where('sales.pay_status', $searchPaymentStatus);
+        }
+
+        if ($searchStatus != null) {
+            $query->where('sales.status', $searchStatus);
         }
 
         $sales = $query->orderBy($sortBy, $sortOrder)->orderBy('id', 'desc')->paginate(10);
-        $sales->appends([
-            'sort_by' => $sortBy,
-            'sort_order' => $sortOrder,
-        ]);
-
         $sales->appends($request->all());
 
         return response()->json([
@@ -811,7 +796,7 @@ class SalesController extends Controller
                 'total_pages' => $sales->lastPage(),
                 'next_page' => $sales->nextPageUrl(),
                 'prev_page' => $sales->previousPageUrl(),
-                'total_data' => $sales->total() 
+                'total_data' => $sales->total()
             ],
         ]);
     }
