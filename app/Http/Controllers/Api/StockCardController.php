@@ -253,7 +253,7 @@ class StockCardController extends Controller
             $params = [$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate];
 
             $whereTxDate = 'a.tx_date < ?';
-            $paramsStockAwal = [$filterStartDate];
+            $paramsStockAwal = [$filterEndDate];
         }
 
         if ($request->location_id) {
@@ -321,6 +321,7 @@ class StockCardController extends Controller
         $result = [];
 
         $items = Item::where('status', 1)->where('item_code', $request->item_code)->get();
+        
 
         for ($i = 0; $i < sizeof($items); $i++)
         {
@@ -387,7 +388,7 @@ class StockCardController extends Controller
                 $initQty = $saldoQty;
                 $saldoQty = $saldoQty + ((float)$item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ((float)$item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ((float)$item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ((float)$item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
 
-                // if ($item[$j]->doc_number == 'STOCK AWAL')
+                // if ($item[$j]->doc_number != 'STOCK AWAL')
                 // {
                 //     dd($saldoQty);
                 // }
