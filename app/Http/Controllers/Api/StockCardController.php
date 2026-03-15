@@ -28,8 +28,8 @@ class StockCardController extends Controller
             ]);
         }
 
-        $startDate = $request->start_date ? DateTime::createFromFormat('!m-Y', $request->start_date)->modify('first day of this month') : null;
-        $endDate = $request->end_date ? DateTime::createFromFormat('!m-Y', $request->end_date)->modify('last day of this month') : null;
+        $startDate = $request->start_date ? DateTime::createFromFormat('!m-Y', $request->start_date)->modify('first day of this month') : (new DateTime('now'))->modify('first day of this month');
+        $endDate = $request->end_date ? DateTime::createFromFormat('!m-Y', $request->end_date)->modify('last day of this month') : (new DateTime('now'))->modify('last day of this month');
 
         if ($startDate > $endDate) {
             return response()->json([
@@ -42,21 +42,14 @@ class StockCardController extends Controller
         // $filterStartDate = $date->modify('first day of this Month')->format('Y-m-d');
         // $filterEndDate = $date->modify('last day of this Month')->format('Y-m-d');
 
-        if ($request->start_date)
-        {
-            $filterStartDate = $startDate->format('Y-m-d');
-        }
-
-        if ($request->end_date)
-        {
-            $filterEndDate = $endDate->format('Y-m-d');
-        }
+        $filterStartDate = $startDate->format('Y-m-d');
+        $filterEndDate = $endDate->format('Y-m-d');
 
         $where = '';
         $whereTxDate = '';
         $params = [];
         $paramsStockAwal = [];
-        if ($request->start_date && $request->end_date)
+        if ($filterStartDate && $filterEndDate)
         {
             $where = '(
                     a.procurement_date >= ?
