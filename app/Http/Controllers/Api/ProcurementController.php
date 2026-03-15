@@ -433,296 +433,278 @@ class ProcurementController extends Controller
     public function updateProcurement(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'itemDetails'                 => 'array',
+            'itemDetails' => 'array',
         ]);
-        
+
         if ($validator->fails()) {
-            $errorMsg = '';
-            
-            foreach ($validator->errors()->all() as $error)
-            {
-                $errorMsg .= $error . '<br>';
-            }
-            
             return response()->json([
                 "status" => false,
-                "message" => $errorMsg
+                "message" => implode('<br>', $validator->errors()->all())
             ], 400);
         }
-        
-        if(Procurement::where('id', $id)->whereIn('status', [1])->exists())
-        {
-            $procurement = Procurement::where('id', $id)->whereIn('status', [1,3])->first();
-            $date = strtotime($request->procurement_date ?? $procurement->procurement_date);
 
-            $procurementDate = date('Y-m-d H:i:s',$date);
+        // Single query instead of exists() + first() with unified status filter
+        $procurement = Procurement::where('id', $id)->whereIn('status', [1, 3])->first();
 
-            if($request->tax_ids == null && $procurement->tax != null)
-            {
-                $taxesVal = explode('|', $procurement->tax);
-
-                $taxes = Tax::whereIn('value', $taxesVal)->pluck('id')->toArray();
-            }
-            else
-            {
-                $taxes = explode(',', $request->tax_ids);
-            }
-
-            $tax = Tax::whereIn('id', $taxes)->sum('value');
-            $taxes = Tax::whereIn('id', $taxes)->get();
-            
-            $totalTax = [];
-            foreach ($taxes as $key)
-            {
-                $totalTax[] = $key->value;
-            }
-
-            $totalAmount = 0;
-            
-            DB::beginTransaction();
-            try
-            {
-                $procurement->update([
-                    'contact_id'            => $request->contact_id ?? $procurement->contact_id,
-                    'procurement_date'      => $procurementDate,
-                    'status'                => 1,
-                    'include_tax'           => $request->include_tax ?? $procurement->include_tax,
-                    'external_doc_no'       => $request->external_doc_no ?? $procurement->external_doc_no,
-                    'delivery_status'       => $request->delivery_status ?? $procurement->delivery_status,
-                    'updated_by'            => auth()->user()->id,
-                    'updated_at'            => date("Y-m-d H:i:s"),
-                    'location_id'           => $request->location_id ?? $procurement->location_id,
-                ]);
-    
-                if ($request->itemDetails != null)
-                {
-                    foreach ($request->itemDetails as $item)
-                    {
-                        $procurementDet = DB::table('procurement_details')
-                                        ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
-                                        ->where('items_details.item_code', $item['item_code'])
-                                        ->where('procurement_details.status', 1)
-                                        ->where('items_details.status', 1)
-                                        ->where('procurement_details.procurement_id', $procurement->id)
-                                        ->select('procurement_details.id as id', 'procurement_details.item_detail_id as item_detail_id')
-                                        ->first();
-        
-                        if ($procurementDet == null)
-                        {
-                            DB::rollBack();
-                            return response()->json([
-                                "status" => false,
-                                "message" => "Procurement item not found"
-                            ], 404);
-                        }
-        
-                        if ($request->location_id != null)
-                        {
-                            $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
-                        }
-                        else
-                        {
-                            $itemDet = ItemDetail::where('id', $procurementDet->item_detail_id)->where('status', 1)->first();
-                        }
-    
-                        $procurementDet = ProcurementDetail::where('id', $procurementDet->id)->where('status', 1)->first();
-        
-                        $discounts = $item['discounts'] ?? explode('|', $procurementDet->discount);
-        
-                        if ($request->include_tax)
-                        {
-                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
-                            foreach ($discounts as $discount)
-                            {
-                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
-                                
-                                $priceAfterDiscount = $priceAfterDiscount - $discount;
-                            }
-        
-                            $itemPrice = $priceAfterDiscount / (1 + $tax/100);
-                            
-                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
-                        }
-                        else
-                        {
-                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
-                            foreach ($discounts as $discount)
-                            {
-                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
-                                
-                                $priceAfterDiscount = $priceAfterDiscount - $discount;
-                            }
-        
-                            $itemPrice = $priceAfterDiscount;
-        
-                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
-                        }
-        
-                        $procurementDet->update([
-                            'status'        => 0,  
-                            'updated_by'    => auth()->user()->id,
-                            'updated_at'    => date("Y-m-d H:i:s")
-                        ]);
-
-                        ProcurementDetail::create([
-                            'procurement_id'    => $procurement->id,
-                            'item_detail_id'    => $itemDet['id'],
-                            'qty'               => $item['qty'],
-                            'price'             => $itemPrice,
-                            'total'             => round($total, 2),
-                            'tax_ids'           => $request->tax_ids,
-                            'created_by'        => auth()->user()->id,
-                            'updated_by'        => auth()->user()->id,
-                            'status'            => 1,
-                            'discount'          => implode('|', $discounts),
-                            'initial_price'     => $item['price']
-                        ]);
-                        
-                        $totalAmount += ($total + $total * ($tax/100));
-                    }
-                }
-                else
-                {
-                    $totalAmount = 0;
-
-                    $procurementDet = ProcurementDetail::where('procurement_id', $procurement->id)->where('status', 1)->get();
-                    if ($request->location_id != $procurement->location_id)
-                    {
-                        foreach ($procurementDet as $item)
-                        {
-                            $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->select('item_code')->first();
-                            
-                            if ($itemDet == null)
-                            {
-                                DB::rollBack();
-                                return response()->json([
-                                    "status" => false,
-                                    "message" => "Item not found"
-                                ], 404);
-                            }
-        
-                            $itemDet = ItemDetail::where('item_code', $itemDet->item_code)->where('location_id', $request->location_id)->where('status', 1)->first();
-
-                            if ($itemDet == null)
-                            {
-                                $itemDet = ItemDetail::create([
-                                    'item_code'     => $itemDet->item_code,
-                                    'location_id'   => $request->location_id,
-                                    'qty'           => 0,
-                                    'price'         => 0,
-                                    'created_by'    => auth()->user()->id,
-                                    'updated_by'    => auth()->user()->id,
-                                    'status'        => 1
-                                ]);
-                            }
-                            
-                            $item->update([
-                                'item_detail_id'    => $itemDet->id,
-                                'location_id'       => $request->location_id,
-                                'updated_by'        => auth()->user()->id,
-                                'updated_at'        => date("Y-m-d H:i:s")
-                            ]);
-
-                            
-                        }
-                    }
-
-                    foreach ($procurementDet as $item)
-                    {
-                        $discounts = $item['discounts'] ?? explode('|', $item->discount);
-        
-                        if ($request->include_tax)
-                        {
-                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
-                            foreach ($discounts as $discount)
-                            {
-                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
-                                
-                                $priceAfterDiscount = $priceAfterDiscount - $discount;
-                            }
-        
-                            $itemPrice = $priceAfterDiscount / (1 + $tax/100);
-                            
-                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
-                        }
-                        else
-                        {
-                            $priceAfterDiscount = $item['price'] ?? $procurementDet->initial_price;
-                            foreach ($discounts as $discount)
-                            {
-                                $discount = $discount ?? 0 ? ($discount/100) * $priceAfterDiscount : 0;
-                                
-                                $priceAfterDiscount = $priceAfterDiscount - $discount;
-                            }
-        
-                            $itemPrice = $priceAfterDiscount;
-        
-                            $total = ($item['qty'] ?? $procurementDet->qty) * $itemPrice;
-                        }
-
-                        $totalAmount += ($total + $total * ($tax/100));
-                    }
-                    
-                }
-
-                $totalAmount += $request->round;
-    
-                if ($request->rounding === 'down') 
-                {
-                    $roundedAmount = floor($totalAmount);
-                } 
-                elseif ($request->rounding === 'up') 
-                {
-                    $roundedAmount = ceil($totalAmount);
-                } 
-                else 
-                {
-                    $roundedAmount = round($totalAmount,2);
-                }
-
-                $paymentStatus = 'Unpaid';
-                
-                $procurement->update([
-                    'rounding'      => (float)($request->round ?? $procurement->rounding),
-                    'amount'        => $roundedAmount,
-                    'pay_status'    => $paymentStatus,
-                    'updated_by'    => auth()->user()->id,
-                    'updated_at'    => date("Y-m-d H:i:s"),
-                    'tax'           => implode('|', $totalTax)
-                ]);
-
-                $description = "Update Procurement\n
-                request : " . json_encode($request->all()) . "
-                response : Procurement Updated". "\n
-                on " . date("Y-m-d H:i:s") . "
-                by " . auth()->user()->username;
-
-                $this->history('procurement', 'update procurement', $description);
-    
-                DB::commit();
-                return response()->json([
-                    "status" => true,
-                    "message" => "Procurement Updated"
-                ]);
-            }
-            catch (\Throwable $e)
-            {
-                dd($e);
-                DB::rollBack();
-    
-                return response()->json([
-                    "status" => false,
-                    "message" => $e
-                ], 500);
-            }
-        }
-        else
-        {
+        if ($procurement == null) {
             return response()->json([
                 "status" => false,
                 "message" => "Procurement not found"
             ], 404);
         }
+
+        $date = strtotime($request->procurement_date ?? $procurement->procurement_date);
+        $procurementDate = date('Y-m-d H:i:s', $date);
+
+        // Single tax query instead of separate sum() + get()
+        $tax = 0;
+        $totalTax = [];
+        if ($request->tax_ids != null && $procurement->tax != null) {
+            $taxIds = explode(',', $request->tax_ids);
+            $taxes = Tax::whereIn('id', $taxIds)->get();
+            $tax = $taxes->sum('value');
+            $totalTax = $taxes->pluck('value')->toArray();
+        }
+
+        $totalAmount = 0;
+
+        DB::beginTransaction();
+        try {
+            $procurement->update([
+                'contact_id'       => $request->contact_id ?? $procurement->contact_id,
+                'procurement_date' => $procurementDate,
+                'status'           => 1,
+                'include_tax'      => $request->include_tax ?? $procurement->include_tax,
+                'external_doc_no'  => $request->external_doc_no ?? $procurement->external_doc_no,
+                'delivery_status'  => $request->delivery_status ?? $procurement->delivery_status,
+                'updated_by'       => auth()->user()->id,
+                'updated_at'       => date("Y-m-d H:i:s"),
+                'location_id'      => $request->location_id ?? $procurement->location_id,
+            ]);
+
+            
+
+            if ($request->itemDetails != null) {
+                // Soft-delete all existing procurement details before re-creating from request
+                ProcurementDetail::where('procurement_id', $procurement->id)
+                    ->where('status', 1)
+                    ->update([
+                        'status'     => 0,
+                        'updated_by' => auth()->user()->id,
+                        'updated_at' => date("Y-m-d H:i:s"),
+                    ]);
+
+                $totalAmount = $this->processItemDetails(
+                    $request, $procurement, $tax
+                );
+            } else {
+                $totalAmount = $this->recalculateExistingDetails(
+                    $request, $procurement, $tax
+                );
+            }
+
+            $totalAmount += $request->round;
+
+            if ($request->rounding === 'down') {
+                $roundedAmount = floor($totalAmount);
+            } elseif ($request->rounding === 'up') {
+                $roundedAmount = ceil($totalAmount);
+            } else {
+                $roundedAmount = round($totalAmount, 2);
+            }
+
+            $procurement->update([
+                'rounding'   => (float)($request->round ?? $procurement->rounding),
+                'amount'     => $roundedAmount,
+                'pay_status' => 'Unpaid',
+                'updated_by' => auth()->user()->id,
+                'updated_at' => date("Y-m-d H:i:s"),
+                'tax'        => implode('|', $totalTax)
+            ]);
+
+            $description = "Update Procurement\n
+                request : " . json_encode($request->all()) . "
+                response : Procurement Updated" . "\n
+                on " . date("Y-m-d H:i:s") . "
+                by " . auth()->user()->username;
+
+            $this->history('procurement', 'update procurement', $description);
+
+            DB::commit();
+
+            return response()->json([
+                "status" => true,
+                "message" => "Procurement Updated"
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                "status" => false,
+                "message" => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculate the item price after applying discounts and tax.
+     */
+    private function calculateItemPrice(float $price, array $discounts, float $taxRate, bool $includeTax): array
+    {
+        $priceAfterDiscount = $price;
+        foreach ($discounts as $discount) {
+            $discountAmount = $discount ? ($discount / 100) * $priceAfterDiscount : 0;
+            $priceAfterDiscount -= $discountAmount;
+        }
+
+        $itemPrice = $includeTax
+            ? $priceAfterDiscount / (1 + $taxRate / 100)
+            : $priceAfterDiscount;
+
+        return ['itemPrice' => $itemPrice, 'priceAfterDiscount' => $priceAfterDiscount];
+    }
+
+    /**
+     * Process updated item details provided in the request.
+     */
+    private function processItemDetails(Request $request, Procurement $procurement, float $tax): float
+    {
+        $totalAmount = 0;
+
+        foreach ($request->itemDetails as $item) {
+            $discounts = $item['discount'] ?? [];
+
+            $procurementDet = DB::table('procurement_details')
+                ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
+                ->where('items_details.item_code', $item['item_code'])
+                ->where('procurement_details.status', 1)
+                ->where('items_details.status', 1)
+                ->where('procurement_details.procurement_id', $procurement->id)
+                ->select('procurement_details.id as id', 'procurement_details.item_detail_id as item_detail_id')
+                ->first();
+
+            if ($procurementDet == null) {
+                try {
+                    $itemDet = ItemDetail::where('item_code', $item['item_code'])
+                        ->where('location_id', $request->location_id ?? 1)
+                        ->where('status', 1)
+                        ->first();
+                } catch (\Throwable $e) {
+                    throw new \Exception("Item not found", 404);
+                }
+            } else {
+                $itemDet = ($request->location_id != null)
+                    ? ItemDetail::where('item_code', $item['item_code'])
+                        ->where('location_id', $request->location_id)
+                        ->where('status', 1)
+                        ->first()
+                    : ItemDetail::where('id', $procurementDet->item_detail_id)
+                        ->where('status', 1)
+                        ->first();
+
+                $procurementDet = ProcurementDetail::where('id', $procurementDet->id)
+                    ->where('status', 1)
+                    ->first();
+
+                $discounts = $item['discount'] ?? explode('|', $procurementDet->discount);
+            }
+
+            $price = $item['price'] ?? ($procurementDet->initial_price ?? 0); // Added null coalescing for initial_price
+            $qty = $item['qty'] ?? ($procurementDet->qty ?? 0); // Added null coalescing for qty
+            $includeTax = (bool)$request->include_tax;
+
+            $calculated = $this->calculateItemPrice($price, $discounts, $tax, $includeTax);
+            $itemPrice = $calculated['itemPrice'];
+            $total = $qty * $itemPrice;
+
+            ProcurementDetail::create([
+                'procurement_id' => $procurement->id,
+                'item_detail_id' => $itemDet['id'],
+                'qty'            => $item['qty'],
+                'price'          => $itemPrice,
+                'total'          => round($total, 2),
+                'tax_ids'        => $request->tax_ids,
+                'created_by'     => auth()->user()->id,
+                'updated_by'     => auth()->user()->id,
+                'status'         => 1,
+                'discount'       => implode('|', $discounts),
+                'initial_price'  => $item['price']
+            ]);
+
+            $totalAmount += ($total + $total * ($tax / 100));
+        }
+
+        return $totalAmount;
+    }
+
+    /**
+     * Recalculate totals for existing procurement details (no new items provided).
+     */
+    private function recalculateExistingDetails(Request $request, Procurement $procurement, float $tax): float
+    {
+        $totalAmount = 0;
+
+        $procurementDet = ProcurementDetail::where('procurement_id', $procurement->id)
+            ->where('status', 1)
+            ->get();
+
+        // Relocate items if location changed
+        if ($request->location_id != $procurement->location_id) {
+            foreach ($procurementDet as $item) {
+                $existingItemDet = ItemDetail::where('id', $item->item_detail_id)
+                    ->where('status', 1)
+                    ->select('item_code')
+                    ->first();
+
+                if ($existingItemDet == null) {
+                    throw new \Exception("Item not found", 404);
+                }
+
+                // Save item_code before the variable is potentially overwritten
+                $itemCode = $existingItemDet->item_code;
+
+                $itemDet = ItemDetail::where('item_code', $itemCode)
+                    ->where('location_id', $request->location_id)
+                    ->where('status', 1)
+                    ->first();
+
+                if ($itemDet == null) {
+                    $itemDet = ItemDetail::create([
+                        'item_code'  => $itemCode,
+                        'location_id' => $request->location_id,
+                        'qty'        => 0,
+                        'price'      => 0,
+                        'created_by' => auth()->user()->id,
+                        'updated_by' => auth()->user()->id,
+                        'status'     => 1
+                    ]);
+                }
+
+                $item->update([
+                    'item_detail_id' => $itemDet->id,
+                    'location_id'    => $request->location_id,
+                    'updated_by'     => auth()->user()->id,
+                    'updated_at'     => date("Y-m-d H:i:s")
+                ]);
+            }
+        }
+
+        // Recalculate totals for each detail
+        foreach ($procurementDet as $item) {
+            $discounts = $item['discounts'] ?? explode('|', $item->discount);
+
+            $price = $item->price ?? $item->initial_price;
+            $qty = $item->qty;
+            $includeTax = (bool)$request->include_tax;
+
+            $calculated = $this->calculateItemPrice($price, $discounts, $tax, $includeTax);
+            $itemPrice = $calculated['itemPrice'];
+            $total = $qty * $itemPrice;
+
+            $totalAmount += ($total + $total * ($tax / 100));
+        }
+
+        return $totalAmount;
     }
 
     public function void(Request $request)
