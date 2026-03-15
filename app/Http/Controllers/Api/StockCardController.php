@@ -74,7 +74,7 @@ class StockCardController extends Controller
             $params = [$filterStartDate, $filterStartDate, $filterStartDate, $filterStartDate, $filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate];
 
             $whereTxDate = 'a.tx_date < ?';
-            $paramsStockAwal = [$filterStartDate];
+            $paramsStockAwal = [$filterEndDate];
         }
 
         if ($request->location_id) {
