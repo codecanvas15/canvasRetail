@@ -135,7 +135,6 @@ class StockCardController extends Controller
             $value = 0;
             $saldoQty       = 0;
             $saldoNominal   = 0;
-            $procurement_qty = 0;
 
             foreach ($itemStockAwal as $key => $itemDet) 
             {
