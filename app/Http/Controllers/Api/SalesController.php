@@ -326,27 +326,19 @@ class SalesController extends Controller
     public function updateSales(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            "itemDetails"    => "array"
+            'itemDetails' => 'array',
         ]);
 
         if ($validator->fails()) {
-            $errorMsg = '';
-            
-            foreach ($validator->errors()->all() as $error)
-            {
-                $errorMsg .= $error . '<br>';
-            }
-            
             return response()->json([
                 "status" => false,
-                "message" => $errorMsg
+                "message" => implode('<br>', $validator->errors()->all())
             ], 400);
         }
 
         $sales = Sales::where('id', $id)->where('status', 1)->first();
-        
-        if ($sales == null)
-        {
+
+        if ($sales == null) {
             return response()->json([
                 "status" => false,
                 "message" => "Sales not found"
@@ -354,56 +346,38 @@ class SalesController extends Controller
         }
 
         $date = strtotime($request->sales_date ?? $sales->sales_date);
-        $salesDate = date('Y-m-d H:i:s',$date);
-
-        // document number
-        $date = new DateTime('now');
-        $date = $date->format('dmY');
+        $salesDate = date('Y-m-d H:i:s', $date);
 
         $due = Contact::where('id', $request->contact_id)->select('due_date')->first();
 
-            // Convert $salesDate to DateTime object
         $salesDateTime = new DateTime($salesDate);
-
-        // Add the number of days from $due->due_date
         $salesDateTime->modify('+' . $due->due_date . ' days');
-
-        // Format the resulting date
         $dueDate = $salesDateTime->format('Y-m-d H:i:s');
 
-        if ($request->tax_ids == null)
-        {
-            $taxes = explode('|', $sales->tax);
-            $tax = array_sum($taxes);
-
-            $totalTax = $sales->tax;
+        // Single tax query instead of separate sum() + get()
+        $tax = 0;
+        $totalTax = $sales->tax;
+        if ($request->tax_ids != null) {
+            $taxIds = explode(',', $request->tax_ids);
+            $taxes = Tax::whereIn('id', $taxIds)->get();
+            $tax = $taxes->sum('value');
+            $totalTax = implode('|', $taxes->pluck('value')->toArray());
+        } elseif ($sales->tax != null) {
+            $taxValues = explode('|', $sales->tax);
+            $tax = array_sum($taxValues);
         }
-        else
-        {
-            $taxes = explode(',', $request->tax_ids);
 
-            $tax = Tax::whereIn('id', $taxes)->sum('value');
-            $taxes = Tax::whereIn('id', $taxes)->get();
-            
-            $totalTax = [];
-            foreach ($taxes as $key)
-            {
-                $totalTax[] = $key->value;
-            }
+        $totalAmount = 0;
 
-            $totalTax = implode('|', $totalTax);
-        }
-        
         DB::beginTransaction();
-        try
-        {
+        try {
             $sales->update([
                 'contact_id'    => $request->contact_id ?? $sales->contact_id,
                 'sales_date'    => $salesDate,
                 'updated_by'    => auth()->user()->id,
                 'status'        => 1,
                 'bank_id'       => $request->bank_id ?? $sales->bank_id,
-                'rounding'      => (float)($request->round) ?? $sales->rounding,
+                'rounding'      => (float)($request->round ?? $sales->rounding),
                 'location_id'   => $request->location_id ?? $sales->location_id,
                 'reason'        => $request->notes ?? $sales->reason,
                 'due_date'      => $dueDate,
@@ -411,198 +385,45 @@ class SalesController extends Controller
                 'include_tax'   => $request->has('include_tax') ? ($request->include_tax == 1 ? 1 : 0) : $sales->include_tax
             ]);
 
-            $totalAmount = 0;
-            
-            if ($request->itemDetails != null)
-            {
-                foreach ($request->itemDetails as $item)
-                {
-                    $salesDet = DB::table('sales_details')
-                                    ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
-                                    ->where('items_details.item_code', $item['item_code'])
-                                    ->where('sales_details.status', 1)
-                                    ->where('items_details.status', 1)
-                                    ->where('sales_details.sales_id', $sales->id)
-                                    ->select('sales_details.id as id', 'sales_details.item_detail_id as item_detail_id')
-                                    ->first();
-    
-                    if ($salesDet == null)
-                    {
-                        DB::rollBack();
-                        return response()->json([
-                            "status" => false,
-                            "message" => "Sales item not found"
-                        ], 404);
-                    }
-    
-                    if ($request->location_id != null)
-                    {
-                        $itemDet = ItemDetail::where('item_code', $item['item_code'])->where('location_id', $request->location_id)->where('status', 1)->first();
-                    }
-                    else
-                    {
-                        $itemDet = ItemDetail::where('id', $salesDet->item_detail_id)->where('status', 1)->first();
-                    }
-    
-                    if ($request->include_tax)
-                    {
-                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-                        
-                        $priceAfterDiscount = $item['price'] - $discount;
-    
-                        $itemPrice = $priceAfterDiscount / (1 + $tax/100);
-    
-                        $total = $item['qty'] * $itemPrice;
-                    }
-                    else
-                    {
-                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-    
-                        $priceAfterDiscount = $item['price'] - $discount;
-    
-                        $itemPrice = $priceAfterDiscount;
-    
-                        $total = $item['qty'] * $itemPrice;
-                    }
-    
-                    if ($request->include_tax)
-                    {
-                        $total = $item['qty'] * $itemPrice;
-                    }
-                    else
-                    {
-                        $total = $item['qty'] * $item['price'];
-                    }
-    
-                    $salesDet = SalesDetail::where('id', $salesDet->id)->where('status', 1)->first();
-                    
-                    $salesDet->update([
-                        'status'            => 0,
-                        'updated_by'        => auth()->user()->id,
-                        'updated_at'        => date("Y-m-d H:i:s")
-                    ]);
-    
-                    // insert sales detail
-                    SalesDetail::create([
-                        'sales_id'          => $sales->id,
-                        'item_detail_id'    => $itemDet['id'],
-                        'qty'               => $item['qty'],
-                        'price'             => $itemPrice,
-                        'total'             => $total,
-                        'tax_ids'           => $request->tax_ids,
-                        'created_by'        => auth()->user()->id,
-                        'updated_by'        => auth()->user()->id,
-                        'status'            => 1,
-                        'discount'          => $discount,
-                        'initial_price'     => $item['price']
+            if ($request->itemDetails != null) {
+                // Soft-delete all existing sales details before re-creating from request
+                SalesDetail::where('sales_id', $sales->id)
+                    ->where('status', 1)
+                    ->update([
+                        'status'     => 0,
+                        'updated_by' => auth()->user()->id,
+                        'updated_at' => date("Y-m-d H:i:s"),
                     ]);
 
-                    $totalAmount += ($total + $total * ($tax/100));
-                }
-            }
-            else
-            {
-                $salesDet = SalesDetail::where('sales_id', $sales->id)->where('status', 1)->get();
-                if ($request->location_id != $sales->location_id)
-                {
-                    foreach ($salesDet as $item)
-                    {
-                        $itemDet = ItemDetail::where('id', $item->item_detail_id)->where('status', 1)->first();
-                        
-                        if ($itemDet == null)
-                        {
-                            DB::rollBack();
-                            return response()->json([
-                                "status" => false,
-                                "message" => "Item not found"
-                            ], 404);
-                        }
-
-                        if ($itemDet == null)
-                        {
-                            $itemDet = ItemDetail::create([
-                                'item_code'     => $itemDet->item_code,
-                                'location_id'   => $request->location_id,
-                                'qty'           => 0,
-                                'price'         => 0,
-                                'created_by'    => auth()->user()->id,
-                                'updated_by'    => auth()->user()->id,
-                                'status'        => 1
-                            ]);
-                        }
-                        
-                        $item->update([
-                            'item_detail_id'    => $itemDet->id,
-                            'location_id'       => $request->location_id,
-                            'updated_by'        => auth()->user()->id,
-                            'updated_at'        => date("Y-m-d H:i:s")
-                        ]);
-                    }
-                }
-
-                foreach ($salesDet as $item)
-                {
-                    if ($request->include_tax)
-                    {
-                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-                        
-                        $priceAfterDiscount = $item['price'] - $discount;
-    
-                        $itemPrice = $priceAfterDiscount / (1 + $tax/100);
-    
-                        $total = $item['qty'] * $itemPrice;
-                    }
-                    else
-                    {
-                        $discount = $item['discount'] ?? 0 ? ($item['discount']/100) * $item['price'] : 0;
-    
-                        $priceAfterDiscount = $item['price'] - $discount;
-    
-                        $itemPrice = $priceAfterDiscount;
-    
-                        $total = $item['qty'] * $itemPrice;
-                    }
-    
-                    if ($request->include_tax)
-                    {
-                        $total = $item['qty'] * $itemPrice;
-                    }
-                    else
-                    {
-                        $total = $item['qty'] * $item['price'];
-                    }
-                }
-
-                $totalAmount += ($total + $total * ($tax/100));
+                $totalAmount = $this->processSalesItemDetails(
+                    $request, $sales, $tax
+                );
+            } else {
+                $totalAmount = $this->recalculateExistingSalesDetails(
+                    $request, $sales, $tax
+                );
             }
 
             $totalAmount += $request->round;
 
-            if ($request->rounding === 'down') 
-            {
+            if ($request->rounding === 'down') {
                 $roundedAmount = floor($totalAmount);
-            } 
-            elseif ($request->rounding === 'up') 
-            {
+            } elseif ($request->rounding === 'up') {
                 $roundedAmount = ceil($totalAmount);
-            } 
-            else 
-            {
-                $roundedAmount = round($totalAmount);
+            } else {
+                $roundedAmount = round($totalAmount, 2);
             }
 
-            $paymentStatus = 'Unpaid';
-
             $sales->update([
-                'amount'        => $roundedAmount,
-                'pay_status'    => $paymentStatus,
-                'updated_by'    => auth()->user()->id,
-                'updated_at'    => date("Y-m-d H:i:s")
+                'amount'     => $roundedAmount,
+                'pay_status' => 'Unpaid',
+                'updated_by' => auth()->user()->id,
+                'updated_at' => date("Y-m-d H:i:s")
             ]);
 
             $description = "Update Sales\n
             request : " . json_encode($request->all()) . "
-            response : Sales Updated". "\n
+            response : Sales Updated" . "\n
             on " . date("Y-m-d H:i:s") . "
             by " . auth()->user()->username;
 
@@ -613,20 +434,168 @@ class SalesController extends Controller
             $faktur = $this->generateFaktur($sales->id);
 
             return response()->json([
-                "status" => true,
-                "message" => "Sales Updated",
+                "status"   => true,
+                "message"  => "Sales Updated",
                 "sales_id" => $sales->id,
-                "faktur" => $faktur
+                "faktur"   => $faktur
             ]);
-        }
-        catch (\Throwable $th)
-        {
+        } catch (\Throwable $th) {
             DB::rollBack();
             return response()->json([
-                "status" => false,
-                "message" => $th
+                "status"  => false,
+                "message" => $th->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Calculate the sales item price after applying discount and tax.
+     */
+    private function calculateSalesItemPrice(float $price, float $discount, float $taxRate, bool $includeTax): array
+    {
+        $discountAmount = $discount ? ($discount / 100) * $price : 0;
+        $priceAfterDiscount = $price - $discountAmount;
+
+        $itemPrice = $includeTax
+            ? $priceAfterDiscount / (1 + $taxRate / 100)
+            : $priceAfterDiscount;
+
+        return ['itemPrice' => $itemPrice, 'priceAfterDiscount' => $priceAfterDiscount];
+    }
+
+    /**
+     * Process updated sales item details provided in the request.
+     */
+    private function processSalesItemDetails(Request $request, Sales $sales, float $tax): float
+    {
+        $totalAmount = 0;
+
+        foreach ($request->itemDetails as $item) {
+            $discount = $item['discount'] ?? 0;
+
+            $salesDet = DB::table('sales_details')
+                ->join('items_details', 'sales_details.item_detail_id', '=', 'items_details.id')
+                ->where('items_details.item_code', $item['item_code'])
+                ->where('sales_details.status', 1)
+                ->where('items_details.status', 1)
+                ->where('sales_details.sales_id', $sales->id)
+                ->select('sales_details.id as id', 'sales_details.item_detail_id as item_detail_id')
+                ->first();
+
+            if ($salesDet == null) {
+                try {
+                    $itemDet = ItemDetail::where('item_code', $item['item_code'])
+                        ->where('location_id', $request->location_id ?? 1)
+                        ->where('status', 1)
+                        ->first();
+                } catch (\Throwable $e) {
+                    throw new \Exception("Sales item not found", 404);
+                }
+            } else {
+                $itemDet = ($request->location_id != null)
+                    ? ItemDetail::where('item_code', $item['item_code'])
+                        ->where('location_id', $request->location_id)
+                        ->where('status', 1)
+                        ->first()
+                    : ItemDetail::where('id', $salesDet->item_detail_id)
+                        ->where('status', 1)
+                        ->first();
+
+                $discount = $item['discount'] ?? $salesDet->discount ?? 0;
+            }
+
+            $price = $item['price'] ?? ($salesDet->initial_price ?? 0);
+            $qty = $item['qty'] ?? ($salesDet->qty ?? 0);
+            $includeTax = (bool)$request->include_tax;
+
+            $calculated = $this->calculateSalesItemPrice($price, $discount, $tax, $includeTax);
+            $itemPrice = $calculated['itemPrice'];
+            $total = $qty * $itemPrice;
+
+            SalesDetail::create([
+                'sales_id'      => $sales->id,
+                'item_detail_id' => $itemDet['id'],
+                'qty'           => $item['qty'],
+                'price'         => $itemPrice,
+                'total'         => round($total, 2),
+                'tax_ids'       => $request->tax_ids,
+                'created_by'    => auth()->user()->id,
+                'updated_by'    => auth()->user()->id,
+                'status'        => 1,
+                'discount'      => $discount,
+                'initial_price' => $item['price']
+            ]);
+
+            $totalAmount += ($total + $total * ($tax / 100));
+        }
+
+        return $totalAmount;
+    }
+
+    /**
+     * Recalculate totals for existing sales details (no new items provided).
+     */
+    private function recalculateExistingSalesDetails(Request $request, Sales $sales, float $tax): float
+    {
+        $totalAmount = 0;
+
+        $salesDet = SalesDetail::where('sales_id', $sales->id)->where('status', 1)->get();
+
+        // Relocate items if location changed
+        if ($request->location_id != $sales->location_id) {
+            foreach ($salesDet as $item) {
+                $existingItemDet = ItemDetail::where('id', $item->item_detail_id)
+                    ->where('status', 1)
+                    ->select('item_code')
+                    ->first();
+
+                if ($existingItemDet == null) {
+                    throw new \Exception("Item not found", 404);
+                }
+
+                $itemCode = $existingItemDet->item_code;
+
+                $itemDet = ItemDetail::where('item_code', $itemCode)
+                    ->where('location_id', $request->location_id)
+                    ->where('status', 1)
+                    ->first();
+
+                if ($itemDet == null) {
+                    $itemDet = ItemDetail::create([
+                        'item_code'   => $itemCode,
+                        'location_id' => $request->location_id,
+                        'qty'         => 0,
+                        'price'       => 0,
+                        'created_by'  => auth()->user()->id,
+                        'updated_by'  => auth()->user()->id,
+                        'status'      => 1
+                    ]);
+                }
+
+                $item->update([
+                    'item_detail_id' => $itemDet->id,
+                    'location_id'    => $request->location_id,
+                    'updated_by'     => auth()->user()->id,
+                    'updated_at'     => date("Y-m-d H:i:s")
+                ]);
+            }
+        }
+
+        // Recalculate totals for each detail
+        foreach ($salesDet as $item) {
+            $discount = $item['discount'] ?? 0;
+            $price = $item->price ?? $item->initial_price;
+            $qty = $item->qty;
+            $includeTax = (bool)$request->include_tax;
+
+            $calculated = $this->calculateSalesItemPrice($price, $discount, $tax, $includeTax);
+            $itemPrice = $calculated['itemPrice'];
+            $total = $qty * $itemPrice;
+
+            $totalAmount += ($total + $total * ($tax / 100));
+        }
+
+        return $totalAmount;
     }
 
     public function approveSales(Request $request)
