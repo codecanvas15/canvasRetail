@@ -380,29 +380,31 @@ class StockCardController extends Controller
                 $initQty = $saldoQty;
                 $saldoQty = $saldoQty + ((float)$item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ((float)$item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ((float)$item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ((float)$item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
 
-                // if ($item[$j]->doc_number != 'STOCK AWAL')
-                // {
-                //     dd($saldoQty);
-                // }
-
                 if ($item[$j]->procurement_total != null || $item[$j]->adjustment_total != null)
                 {
                     $saldoNominal = (($value * $initQty) + $item[$j]->procurement_total + ($item[$j]->adjustment_total != null ? $item[$j]->adjustment_total : 0));
 
-                    // if ($item[$j]->doc_number == 'STOCK AWAL')
-                    // {
-                    //     dd($saldoNominal, $saldoQty);
-                    // }
-
-                    if ($saldoQty != 0)
+                    if ($value == 0)
+                    {
+                        $value = $item[$j]->procurement_total / $item[$j]->procurement_qty;
+                    }
+                    else if ($saldoQty != 0)
                     {
                         $value = $saldoNominal / $saldoQty;
                     }
                 }
 
+
                 if ($item[$j]->sales_total != null || $item[$j]->sales_qty != null)
                 {
-                    $item[$j]->sales_total = $value * $item[$j]->sales_qty;
+                    if ($value == 0)
+                    {
+                        $value = $item[$j]->sales_total / $item[$j]->sales_qty;
+                    }
+                    else
+                    {
+                        $item[$j]->sales_total = $value * $item[$j]->sales_qty;
+                    }
                 }
 
                 $adjustment_total = null;
@@ -420,6 +422,7 @@ class StockCardController extends Controller
 
                 if($item[$j]->procurement_qty != null)
                 {
+
                     $saldoMasuk = $item[$j]->procurement_qty;
                 }
                 else if ($item[$j]->adjustment_date != null && $item[$j]->adjustment_qty > 0)
@@ -460,6 +463,7 @@ class StockCardController extends Controller
 
                 $saldoKeluar = $saldoKeluar < 0 ? ($saldoKeluar * -1) : $saldoKeluar;
                 $saldoMasuk = $saldoMasuk < 0 ? ($saldoMasuk * -1) : $saldoMasuk;
+
 
                 $result[$i]['items'][] = [
                     'transaction_date' => $item[$j]->tx_date,
