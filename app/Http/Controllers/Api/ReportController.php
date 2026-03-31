@@ -904,7 +904,7 @@ class ReportController extends Controller
                     or a.usage_date <= ?
                 )
                 $locationCondition
-            ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
+            ORDER BY a.item_code, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
         ", array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate], $locationParams));
 
         $stockAwal = DB::select("
@@ -964,6 +964,8 @@ class ReportController extends Controller
                 'stock' => $stockItem
             ];
         }
+
+        dd($stockCard['BG-WH-POL 4X6']);
 
         $startDateFormated = (new \DateTime($startDate))->format('d-m-Y');
         $endDateFormated = (new \DateTime($endDate))->format('d-m-Y');

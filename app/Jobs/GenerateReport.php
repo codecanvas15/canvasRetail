@@ -701,7 +701,7 @@ class GenerateReport implements ShouldQueue
                     or a.usage_date <= ?
                 )
                 $locationCondition
-            ORDER BY a.item_code, a.created_at, a.procurement_date, a.sales_date
+            ORDER BY a.item_code, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
         ", array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate], $locationParams));
 
         $stockAwal = DB::select("
