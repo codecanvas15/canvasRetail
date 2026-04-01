@@ -688,21 +688,11 @@ class GenerateReport implements ShouldQueue
                 stock_value a
                 JOIN locations l ON a.location_id = l.id
             WHERE
-                (
-                    a.procurement_date >= ?
-                    or a.sales_date >= ?
-                    or a.adjustment_date >= ?
-                    or a.usage_date >= ?
-                )
-                AND (
-                    a.procurement_date <= ?
-                    or a.sales_date <= ?
-                    or a.adjustment_date <= ?
-                    or a.usage_date <= ?
-                )
+                COALESCE(a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date)
+                BETWEEN ? AND ?
                 $locationCondition
-            ORDER BY a.item_code, a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date
-        ", array_merge([$startDate, $startDate, $startDate, $startDate, $endDate, $endDate, $endDate, $endDate], $locationParams));
+            ORDER BY a.item_code, tx_date
+        ", array_merge([$startDate, $endDate], $locationParams));
 
         $stockAwal = DB::select("
             SELECT
@@ -727,7 +717,6 @@ class GenerateReport implements ShouldQueue
             $stockItem = $stock->get($value->item_code) ?? collect();
 
             $stockInitial = $stockAwal->get($value->item_code) ?? collect();
-            // dd($stockInitial);
 
             $stockValue = 0;
             $saldoQty       = 0;
