@@ -119,6 +119,7 @@ Route::group([
     Route::post("payment", [PaymentController::class, "payment"])->middleware('role:owner,admin');
     Route::get("payment", [PaymentController::class, "getPayment"])->middleware('role:owner,admin');
     Route::get("pay-receipt", [PaymentController::class, "payReceipt"])->middleware('role:owner,admin');
+    Route::get("settlement", [PaymentController::class, "settlement"])->middleware('role:owner,admin');
 
     // refund
     Route::post("refund", [RefundController::class, "refund"])->middleware('role:owner,admin');

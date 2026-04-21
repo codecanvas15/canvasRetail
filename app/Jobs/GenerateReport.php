@@ -815,8 +815,13 @@ class GenerateReport implements ShouldQueue
         // dd($stockCard);
         foreach ($stockCard as $item)
         {
-            $sheet->setCellValue('A' . $row, 'Saldo Awal ' . $item['item_name'] . ' (' . $item['item_code'] . ')');
-            $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $sheet->setCellValue('A' . $row, $stock->created_at);
+            $sheet->setCellValue('B' . $row, $stock->tx_date);
+            $sheet->setCellValue('C' . $row, $item['item_name']);
+            $sheet->setCellValue('D' . $row, $item['item_code']);
+            $sheet->setCellValue('E' . $row, 'Saldo Awal');
+            $sheet->mergeCells('E' . $row . ':F' . $row);
+            $sheet->getStyle('E' . $row)->getFont()->setBold(true);
             $sheet->setCellValue('L' . $row, $item['saldo_qty']);
             $sheet->setCellValue('M' . $row, $item['saldo_nominal']);
             $sheet->setCellValue('N' . $row, $item['stock_value']);

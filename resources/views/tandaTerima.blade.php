@@ -63,6 +63,9 @@
                 <td>Grand Total:</td>
                 <td>Rp.{{ number_format($total, 2, ',', '.') }}</td>
             </tr>
+            <tr>
+                <td colspan="4">&nbsp;</td>
+            </tr>
             <tr class="no-border">
                 <td colspan="3"></td>
                 <td>Samarinda, {{ $data->date }}</td>

@@ -1014,8 +1014,12 @@ class ReportController extends Controller
 
         foreach ($stockCard as $item)
         {
-            $sheet->setCellValue('A' . $row, 'Saldo Awal ' . $item['item_name'] . ' (' . $item['item_code'] . ')');
-            $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+            $sheet->setCellValue('C' . $row, $item['item_name']);
+            $sheet->setCellValue('D' . $row, $item['item_code']);
+            $sheet->setCellValue('E' . $row, 'Saldo Awal');
+            $sheet->mergeCells('E' . $row . ':F' . $row);
+            $sheet->getStyle('C' . $row . ':N' . $row)->getFont()->setBold(true);
+            $sheet->getStyle('E' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             $sheet->setCellValue('L' . $row, $item['saldo_qty']);
             $sheet->setCellValue('M' . $row, $item['saldo_nominal']);
             $sheet->setCellValue('N' . $row, $item['stock_value']);

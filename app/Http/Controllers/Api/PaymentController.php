@@ -288,7 +288,7 @@ class PaymentController extends Controller
             $contact = Contact::where('id', $sales->contact_id)->first();
             $paymentDet = DB::table('sales')
                 ->leftJoin('payment', 'sales.id', '=', 'payment.sales_id')
-                ->select('sales.id', 'sales.doc_number', 'sales.sales_date', DB::raw('COALESCE(SUM(sales.amount), 0) as amount'), DB::raw('sales.amount - COALESCE(SUM(payment.amount), 0) as outstanding'), 'sales.status')
+                ->select('sales.id', 'sales.doc_number', DB::raw("DATE_FORMAT(sales.sales_date, '%d/%m/%Y') as sales_date"), DB::raw('COALESCE(SUM(sales.amount), 0) as amount'), DB::raw('sales.amount - COALESCE(SUM(payment.amount), 0) as outstanding'), 'sales.status')
                 ->whereIn('sales.id', $id)
                 ->groupBy('sales.id', 'sales.doc_number', 'sales.sales_date', 'sales.amount', 'sales.status')
                 ->get();
@@ -329,5 +329,113 @@ class PaymentController extends Controller
                 "message" => "Sales not found"
             ], 404);
         }
+    }
+
+    public function settlement(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            "sales_id"        => "required_without:procurement_id",
+            "procurement_id"  => "required_without:sales_id"
+        ]);
+
+        if ($validator->fails()) {
+            $errorMsg = '';
+            
+            foreach ($validator->errors()->all() as $error)
+            {
+                $errorMsg .= $error . '<br>';
+            }
+            
+            return response()->json([
+                "status" => false,
+                "message" => $errorMsg
+            ], 400);
+        }
+
+        if ($request->sales_id && $request->procurement_id) {
+            return response()->json([
+                "status" => false,
+                "message" => "Cannot provide both sales_id and procurement_id."
+            ], 400);
+        }
+
+        $date = new DateTime('now');
+        $date = $date->format('d/m/Y');
+
+        if ($request->sales_id)
+        {
+            $sales = Sales::where('id', $request->sales_id)->first();
+            $customer = Contact::where('id', $sales->contact_id)->select('name')->first();
+
+            if ($sales == null)
+            {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Sales not found"
+                ], 404);
+            }
+
+            $payment = Payment::where('sales_id', $request->sales_id)->where('status', 1)->sum('amount');
+
+            $outstanding = $sales->amount - ($request->amount + $payment);
+
+            $data = [
+                'type' => 'Customer',
+                'name' => $customer->name,
+                'doc_number' => $sales->doc_number,
+                'amount' => $sales->amount,
+                'payment' => $payment,
+                'outstanding' => $outstanding,
+                'notes' => $request->notes,
+                'date' => $date
+            ];
+
+        }
+        else
+        {
+            $procurement = Procurement::where('id', $request->procurement_id)->first();
+            $vendor = Contact::where('id', $procurement->contact_id)->select('name')->first();
+
+            if ($procurement == null)
+            {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Procurement not found"
+                ], 404);
+            }
+
+            $payment = Payment::where('procurement_id', $request->procurement_id)->where('status', 1)->sum('amount');
+
+            $outstanding = $procurement->amount - ($request->amount + $payment);
+
+            $data = [
+                'type' => 'Supplier',
+                'name' => $vendor->name,
+                'doc_number' => $procurement->doc_number,
+                'amount' => $procurement->amount,
+                'payment' => $payment,
+                'outstanding' => $outstanding,
+                'notes' => $request->notes,
+                'date' => $date
+            ];
+        }
+
+        // Save HTML content to a file
+        $htmlContent = view('settlement', ['data' => $data])->render();
+        $htmlPath = public_path() . '/html/settlement-' . $data['doc_number'] . time() . '.html';
+        file_put_contents($htmlPath, $htmlContent);
+
+        $path = public_path() . '/pdf/settlement-' . $data['doc_number'] . time() . '.pdf';
+
+        $pdf = PDF::loadView('settlement', ['data' => $data])->setPaper('a5', 'landscape');;
+
+        $pdf->save($path);
+
+        $pdfPaths = url('/pdf/' . basename($path));
+
+        return response()->json([
+            "status"    => true,
+            "data"      => $pdfPaths
+        ]);
     }
 }
