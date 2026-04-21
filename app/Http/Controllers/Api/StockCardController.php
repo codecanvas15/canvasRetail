@@ -384,7 +384,7 @@ class StockCardController extends Controller
                 {
                     $saldoNominal = (($value * $initQty) + $item[$j]->procurement_total + ($item[$j]->adjustment_total != null ? $item[$j]->adjustment_total : 0));
 
-                    if ($value == 0)
+                    if ($value == 0 && $item[$j]->procurement_qty != null && $item[$j]->procurement_qty != 0)
                     {
                         $value = $item[$j]->procurement_total / $item[$j]->procurement_qty;
 
