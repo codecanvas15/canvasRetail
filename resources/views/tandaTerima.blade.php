@@ -27,6 +27,9 @@
             <tr>
                 <td style="width: 30%"></td>
                 <td class="header">TANDA TERIMA PIUTANG</td>
+            </tr>
+            <tr>
+                <td colspan="2"></td>
                 <td class="recipient">KEPADA YTH,</td>
             </tr>
             <tr>
@@ -90,9 +93,11 @@
                         </tr>
                     </table>
                 </td>
+            </tr>
+            <tr>
+                <td></td>
                 <td>Penerima</td>
                 <td>Hormat Kami</td>
-            </tr>
             <tr>
                 <td></td>
                 <td><span class="signature-space">(_________________)</span></td>

@@ -815,8 +815,6 @@ class GenerateReport implements ShouldQueue
         // dd($stockCard);
         foreach ($stockCard as $item)
         {
-            $sheet->setCellValue('A' . $row, $stock->created_at);
-            $sheet->setCellValue('B' . $row, $stock->tx_date);
             $sheet->setCellValue('C' . $row, $item['item_name']);
             $sheet->setCellValue('D' . $row, $item['item_code']);
             $sheet->setCellValue('E' . $row, 'Saldo Awal');
