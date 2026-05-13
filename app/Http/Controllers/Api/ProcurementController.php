@@ -459,13 +459,13 @@ class ProcurementController extends Controller
         // Single tax query instead of separate sum() + get()
         $tax = 0;
         $totalTax = [];
-        if ($request->tax_ids != null && $procurement->tax != null) {
+        if ($request->tax_ids != null) {
             $taxIds = explode(',', $request->tax_ids);
             $taxes = Tax::whereIn('id', $taxIds)->get();
             $tax = $taxes->sum('value');
             $totalTax = $taxes->pluck('value')->toArray();
         }
-
+        
         $totalAmount = 0;
 
         DB::beginTransaction();
