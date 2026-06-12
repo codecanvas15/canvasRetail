@@ -378,7 +378,11 @@ class StockCardController extends Controller
             for($j = 0; $j < sizeof($item); $j++)
             {
                 $initQty = $saldoQty;
-                $saldoQty = $saldoQty + ((float)$item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - ((float)$item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + ((float)$item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - ((float)$item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
+                $saldoQty = $saldoQty + 
+                    ((float)$item[$j]->procurement_qty == null ? 0 : $item[$j]->procurement_qty) - 
+                    ((float)$item[$j]->sales_qty == null ? 0 : $item[$j]->sales_qty) + 
+                    ((float)$item[$j]->adjustment_qty == null ? 0 : $item[$j]->adjustment_qty) - 
+                    ((float)$item[$j]->usage_qty == null ? 0 : $item[$j]->usage_qty);
 
                 if ($item[$j]->procurement_total != null || $item[$j]->adjustment_total != null)
                 {

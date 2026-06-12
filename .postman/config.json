@@ -1,0 +1,15 @@
+{
+  "workspace": {
+    "id": "8a9365c0-b56f-4af9-807f-710c3b477d6f"
+  },
+  "entities": {
+    "environments": [],
+    "flows": [],
+    "globals": [],
+    "mocks": [],
+    "specs": [],
+    "collections": [
+      "..\\postman collection & env\\Canvas Retail.postman_collection.json"
+    ]
+  }
+}
