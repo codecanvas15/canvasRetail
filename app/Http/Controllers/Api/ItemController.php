@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use DateTime;
 
 class ItemController extends Controller
 {
@@ -108,6 +109,8 @@ class ItemController extends Controller
         $items = $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
 
         $itemCodes = $items->pluck('item_code')->toArray();
+        $date = new DateTime('now');
+        $filterEndDate = $date->modify('last day of this Month')->format('Y-m-d');
 
         if (empty($itemCodes)) {
             $data = [];
@@ -120,14 +123,15 @@ class ItemController extends Controller
                 SELECT
                     a.item_code,
                     a.item_unit,
-                    COALESCE(a.procurement_qty, a.adjustment_qty) as saldo_qty,
+                    COALESCE(a.procurement_qty, a.sales_qty * -1, a.adjustment_qty, a.usage_qty * -1) as saldo_qty,
                     IFNULL(a.procurement_total, 0) as saldo_nominal
                 FROM 
                     stock_value_sum a
                 WHERE
                     a.item_code IN (" . implode(',', array_fill(0, count($itemCodes), '?')) . ")
+                    AND a.tx_date < ?
                 ORDER BY a.item_code, a.tx_date
-            ", $itemCodes);
+            ", array_merge($itemCodes, [$filterEndDate]));
 
             // Step 2: Get all stock_value transactions (same as getStockCardDetails)
             $stockTransactions = DB::select("
@@ -153,8 +157,14 @@ class ItemController extends Controller
                     stock_value a
                 WHERE
                     a.item_code IN (" . implode(',', array_fill(0, count($itemCodes), '?')) . ")
+                    AND (
+                        a.procurement_date <= ?
+                        or a.sales_date <= ?
+                        or a.adjustment_date <= ?
+                        or a.usage_date <= ?
+                    )
                 ORDER BY a.item_code, COALESCE(a.procurement_date, a.sales_date, a.adjustment_date, a.usage_date)
-            ", $itemCodes);
+            ", array_merge($itemCodes, [$filterEndDate, $filterEndDate, $filterEndDate, $filterEndDate]));
 
             // Group data by item_code
             $stockAwalByItem = [];
@@ -185,8 +195,6 @@ class ItemController extends Controller
                 $saldoQty       = 0;
                 $saldoNominal   = 0;
 
-                // dd($itemStockAwal);
-
                 foreach ($itemStockAwal as $itemDet) {
                     if ($itemDet->saldo_nominal == 0) {
                         $saldoNominal += $value * $itemDet->saldo_qty;
@@ -202,57 +210,57 @@ class ItemController extends Controller
                 }
 
                 // Process stock_value transactions to get latest value (same as getStockCardDetails)
-                $itemTx = $stockTxByItem[$itemCode] ?? [];
-                $saldoMasuk = 0;
+                // $itemTx = $stockTxByItem[$itemCode] ?? [];
+                // $saldoMasuk = 0;
 
-                foreach ($itemTx as $txRow) {
-                    $initQty = $saldoQty;
-                    $saldoQty = $saldoQty
-                        + ((float)$txRow->procurement_qty == null ? 0 : $txRow->procurement_qty)
-                        - ((float)$txRow->sales_qty == null ? 0 : $txRow->sales_qty)
-                        + ((float)$txRow->adjustment_qty == null ? 0 : $txRow->adjustment_qty)
-                        - ((float)$txRow->usage_qty == null ? 0 : $txRow->usage_qty);
+                // foreach ($itemTx as $txRow) {
+                //     $initQty = $saldoQty;
+                //     $saldoQty = $saldoQty
+                //         + ((float)$txRow->procurement_qty == null ? 0 : $txRow->procurement_qty)
+                //         - ((float)$txRow->sales_qty == null ? 0 : $txRow->sales_qty)
+                //         + ((float)$txRow->adjustment_qty == null ? 0 : $txRow->adjustment_qty)
+                //         - ((float)$txRow->usage_qty == null ? 0 : $txRow->usage_qty);
 
-                    if ($txRow->procurement_total != null || $txRow->adjustment_total != null) {
-                        $saldoNominal = (($value * $initQty) + $txRow->procurement_total + ($txRow->adjustment_total != null ? $txRow->adjustment_total : 0));
+                //     if ($txRow->procurement_total != null || $txRow->adjustment_total != null) {
+                //         $saldoNominal = (($value * $initQty) + $txRow->procurement_total + ($txRow->adjustment_total != null ? $txRow->adjustment_total : 0));
 
-                        if ($value == 0 && $txRow->procurement_qty != null && $txRow->procurement_qty != 0) {
-                            $value = $txRow->procurement_total / $txRow->procurement_qty;
-                        } else if ($saldoQty != 0) {
-                            $value = $saldoNominal / $saldoQty;
-                        }
-                    }
+                //         if ($value == 0 && $txRow->procurement_qty != null && $txRow->procurement_qty != 0) {
+                //             $value = $txRow->procurement_total / $txRow->procurement_qty;
+                //         } else if ($saldoQty != 0) {
+                //             $value = $saldoNominal / $saldoQty;
+                //         }
+                //     }
 
-                    if ($txRow->sales_total != null || $txRow->sales_qty != null) {
-                        $txRow->sales_total = $value * $txRow->sales_qty;
-                    }
+                //     if ($txRow->sales_total != null || $txRow->sales_qty != null) {
+                //         $txRow->sales_total = $value * $txRow->sales_qty;
+                //     }
 
-                    if ($txRow->procurement_qty != null) {
-                        $saldoMasuk = $txRow->procurement_qty;
-                    } else if ($txRow->adjustment_date != null && $txRow->adjustment_qty > 0) {
-                        $saldoMasuk = $txRow->adjustment_qty;
-                    } else {
-                        $saldoMasuk = null;
-                    }
+                //     if ($txRow->procurement_qty != null) {
+                //         $saldoMasuk = $txRow->procurement_qty;
+                //     } else if ($txRow->adjustment_date != null && $txRow->adjustment_qty > 0) {
+                //         $saldoMasuk = $txRow->adjustment_qty;
+                //     } else {
+                //         $saldoMasuk = null;
+                //     }
 
-                    if ($saldoMasuk > 0 && $txRow->procurement_total == null) {
-                        $saldoNominal += $value * $saldoMasuk;
-                    }
+                //     if ($saldoMasuk > 0 && $txRow->procurement_total == null) {
+                //         $saldoNominal += $value * $saldoMasuk;
+                //     }
 
-                    if ($txRow->sales_qty != null) {
-                        $saldoKeluar = $txRow->sales_qty;
-                    } else if ($txRow->adjustment_date != null && $txRow->adjustment_qty < 0) {
-                        $saldoKeluar = $txRow->adjustment_qty;
-                    } else if ($txRow->usage_date != null) {
-                        $saldoKeluar = $txRow->usage_qty;
-                    } else {
-                        $saldoKeluar = null;
-                    }
+                //     if ($txRow->sales_qty != null) {
+                //         $saldoKeluar = $txRow->sales_qty;
+                //     } else if ($txRow->adjustment_date != null && $txRow->adjustment_qty < 0) {
+                //         $saldoKeluar = $txRow->adjustment_qty;
+                //     } else if ($txRow->usage_date != null) {
+                //         $saldoKeluar = $txRow->usage_qty;
+                //     } else {
+                //         $saldoKeluar = null;
+                //     }
 
-                    if ($saldoKeluar > 0) {
-                        $saldoNominal -= $value * $saldoKeluar;
-                    }
-                }
+                //     if ($saldoKeluar > 0) {
+                //         $saldoNominal -= $value * $saldoKeluar;
+                //     }
+                // }
 
                 $data[] = [
                     'item_code'      => $itemCode,
@@ -260,7 +268,7 @@ class ItemController extends Controller
                     'image'          => $item->image,
                     'category'       => $item->category,
                     'unit'           => $item->unit,
-                    'qty'            => $itemDetailsQty[$itemCode] ?? 0,
+                    'qty'            => $saldoQty ?? 0,
                     'value'          => sprintf("%01.2f", $value),
                 ];
             }
