@@ -5,7 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Faktur</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; margin-top: -50px; margin-bottom: -20px;}
+        @page {
+            size: a5 landscape;
+            margin: 6mm 8mm 6mm 8mm;
+        }
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 12px;
+            margin-top: -30px;
+            margin-bottom: -20px;
+        }
         .container { width: 100%; margin-top: 10px; }
         .header-table {border-collapse: collapse; border: none; width: 100%; }
         .header-table td {vertical-align: top; border: none; word-wrap: break-word; white-space: normal; }
@@ -40,10 +49,10 @@
                             <td>Tgl. Faktur</td>
                             <td>: {{ substr($data['sales_date'],0,10) }}</td>
                         </tr>
-                        <tr>
+                        <!-- <tr>
                             <td>Jatuh Tempo</td>
                             <td>: {{ substr($data['due_date'],0,10) }}</td>
-                        </tr>
+                        </tr> -->
                         <tr>
                             <td>Lokasi</td>
                             <td>: {{$data['location_name']}}</td>
@@ -81,7 +90,6 @@
                 <tr>
                     <th>No.</th>
                     <th>Nama Barang</th>
-                    <th>Serial Number</th>
                     <th>Jumlah</th>
                     <th>Disc</th>
                     <th>Harga Satuan</th>
@@ -94,7 +102,6 @@
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $item->item_name }}</td>
-                    <td>{{ $item->item_code }}</td>
                     <td>{{ $item->qty }}</td>
                     <td>Rp.{{ number_format($item->discount, 2, ',', '.') }}</td>
                     <td>Rp.{{ number_format($item->price, 2, ',', '.') }}</td>

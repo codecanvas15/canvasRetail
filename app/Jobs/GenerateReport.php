@@ -83,6 +83,7 @@ class GenerateReport implements ShouldQueue
             ->join('locations', 'items_details.location_id', '=', 'locations.id')
             ->select('contacts.name as vendor', 'items.name as item_name', 'items.item_code', 'procurements.procurement_date', 'procurements.doc_number', 'procurements.external_doc_no', 'procurement_details.qty', 'procurement_details.price', 'procurement_details.total', 'procurement_details.tax_ids', 'procurement_details.discount', 'locations.name as location', 'procurements.include_tax', 'procurement_details.initial_price', 'procurements.rounding')
             ->where('procurements.status', 2)
+            ->where('procurement_details.status', 1)
             ->whereBetween('procurements.procurement_date', [$startProcurementDate, $endProcurementDate]);
 
 
@@ -264,6 +265,7 @@ class GenerateReport implements ShouldQueue
             ->join('locations', 'items_details.location_id', '=', 'locations.id')
             ->select('contacts.name as customer', 'items.name as item_name', 'items.item_code', 'sales.sales_date', 'sales.doc_number', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'locations.name as location', 'sales_details.initial_price', 'sales.rounding')
             ->where('sales.status', 2)
+            ->where('sales_details.status', 1);
             ->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
         
         if ($locationId != null)
