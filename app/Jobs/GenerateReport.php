@@ -265,7 +265,7 @@ class GenerateReport implements ShouldQueue
             ->join('locations', 'items_details.location_id', '=', 'locations.id')
             ->select('contacts.name as customer', 'items.name as item_name', 'items.item_code', 'sales.sales_date', 'sales.doc_number', 'sales_details.qty', 'sales_details.price', 'sales_details.total', 'sales_details.tax_ids', 'sales_details.discount', 'locations.name as location', 'sales_details.initial_price', 'sales.rounding')
             ->where('sales.status', 2)
-            ->where('sales_details.status', 1);
+            ->where('sales_details.status', 1)
             ->whereBetween('sales.sales_date', [$startSalesDate, $endSalesDate]);
         
         if ($locationId != null)
