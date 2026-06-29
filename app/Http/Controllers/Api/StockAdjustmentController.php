@@ -318,8 +318,10 @@ class StockAdjustmentController extends Controller
 
         if ($search != null)
         {
-            $query->orWhere('stock_adjustment_header.doc_number', 'like', '%' . $searchDocNumber . '%');
-            $query->orWhere('stock_adjustment_header.reason', 'like', '%' . $reason . '%');
+            $query->where(function($q) use ($search) {
+                $q->where('stock_adjustment_header.doc_number', 'like', '%' . $search . '%')
+                  ->orWhere('stock_adjustment_header.reason', 'like', '%' . $search . '%');
+            });
         }
         else
         {
