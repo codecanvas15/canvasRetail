@@ -46,7 +46,7 @@
                 <td>
                     <table>
                         <tr>
-                            <td>Tgl. Faktur</td>
+                            <td>Tgl. PO</td>
                             <td>: {{ substr($data['procurement_date'],0,10) }}</td>
                         </tr>
                         <tr>
@@ -60,7 +60,7 @@
                         <b>PT. Purnama Jaya Teknik</b>
                     </p>
                     <p>
-                        <b><u>FAKTUR</u></b>
+                        <b><u>Purchase Order</u></b>
                     </p>
                     <p style="margin-top: -20px;">
                         {{ $data['doc_number'] }}
