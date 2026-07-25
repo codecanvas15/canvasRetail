@@ -103,6 +103,7 @@ Route::group([
     Route::get("procurement-item-detail", [ProcurementController::class, "getItemProcurement"])->middleware('role:owner,admin');
     Route::post("approve/procurement", [ProcurementController::class, "approveProcurement"])->middleware('role:owner');
     Route::post("void/procurement", [ProcurementController::class, "void"])->middleware('role:owner');
+    Route::get("procurement/generate-po/{id}", [ProcurementController::class, "generatepurchaseorder"])->middleware('role:owner,admin');
     
     // sales
     Route::post("sales", [SalesController::class, "addSales"])->middleware('role:owner,admin');

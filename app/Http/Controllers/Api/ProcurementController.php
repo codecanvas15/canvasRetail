@@ -1075,4 +1075,100 @@ class ProcurementController extends Controller
             ], 404);
         }
     }
+
+    public function generatepurchaseorder($id)
+    {
+        // Single query to fetch and verify procurement exists
+        $procurement = Procurement::where('id', $id)->where('status', 1)->first();
+
+        if (!$procurement) {
+            return response()->json([
+                "status" => false,
+                "message" => "Procurement not found"
+            ], 404);
+        }
+
+        try {
+            // Batch related queries
+            $contact = Contact::where('id', $procurement->contact_id)->first();
+            $location = Location::where('id', $procurement->location_id)->first();
+
+            $procurementDetails = DB::table('procurement_details')
+                ->join('items_details', 'procurement_details.item_detail_id', '=', 'items_details.id')
+                ->join('items', 'items_details.item_code', '=', 'items.item_code')
+                ->join('locations', 'items_details.location_id', '=', 'locations.id')
+                ->where('procurement_details.procurement_id', $id)
+                ->where('procurement_details.status', 1)
+                ->select(
+                    'items.item_code',
+                    'items.unit',
+                    'procurement_details.qty',
+                    'procurement_details.price',
+                    'procurement_details.initial_price',
+                    'procurement_details.total',
+                    'procurement_details.tax_ids',
+                    'procurement_details.discount',
+                    'items.name as item_name',
+                    'items.image as item_image',
+                    'items.category',
+                    'locations.name as location_name',
+                    'locations.id as location_id'
+                )
+                ->get();
+
+            $payments = Payment::where('procurement_id', $id)->where('status', 1)->get();
+
+            // Calculate totals once
+            $detailsTotal = $procurementDetails->sum('total');
+            $taxValues = array_map('floatval', explode('|', $procurement->tax ?? '0'));
+            $ppn = (array_sum($taxValues) / 100) * $detailsTotal;
+
+            // Prepare view data
+            $data = [
+                'procurement' => $procurement,
+                'procurement_date' => $procurement->procurement_date,
+                'contact_name' => $contact->name ?? '',
+                'contact_address' => $contact->address ?? '',
+                'location_name' => $location->name ?? '',
+                'details' => $procurementDetails->chunk(10),
+                'payments' => $payments,
+                'total' => $detailsTotal,
+                'ppn' => $ppn,
+                'grand_total' => $procurement->amount,
+                'doc_number' => $procurement->doc_number,
+            ];
+
+            // Generate PDF directly from HTML (skip intermediate HTML file)
+            $htmlContent = view('purchaseOrder', ['data' => $data])->render();
+            $filename = $procurement->doc_number . '_' . time();
+            $pdfRelativePath = 'pdf/' . $filename . '.pdf';
+            $pdfFullPath = public_path($pdfRelativePath);
+
+            PDF::loadHTML($htmlContent)
+                ->setPaper('a5', 'landscape')
+                ->save($pdfFullPath);
+
+            // Log action with consistent formatting
+            $this->history(
+                'procurement',
+                'generate purchase order',
+                "Generate purchase order for procurement {$id}\n" .
+                "Response: Purchase order generated\n" .
+                "On " . now()->format('Y-m-d H:i:s') . "\n" .
+                "By " . auth()->user()->username
+            );
+
+            return response()->json([
+                "status" => true,
+                "message" => "Purchase order generated",
+                "pdf_path" => url($pdfRelativePath)
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                "status" => false,
+                "message" => "Error generating purchase order: " . $e->getMessage()
+            ], 500);
+        }
+    }
 }
