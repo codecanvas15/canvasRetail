@@ -1079,7 +1079,7 @@ class ProcurementController extends Controller
     public function generatepurchaseorder($id)
     {
         // Single query to fetch and verify procurement exists
-        $procurement = Procurement::where('id', $id)->where('status', 1)->first();
+        $procurement = Procurement::where('id', $id)->first();
 
         if (!$procurement) {
             return response()->json([
